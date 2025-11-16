@@ -19,7 +19,16 @@ export class TurboDocxApi implements ICredentialType {
 			},
 			default: '',
 			required: true,
-			description: 'Your TurboDocx API key (JWT token from Auth0)',
+			description: 'Your TurboDocx API key',
+		},
+		{
+			displayName: 'Organization ID',
+			name: 'orgId',
+			type: 'string',
+			default: '',
+			required: true,
+			description: 'Your TurboDocx Organization ID (UUID)',
+			placeholder: 'e.g., 123e4567-e89b-12d3-a456-426614174000',
 		},
 		{
 			displayName: 'Base URL',
@@ -36,6 +45,7 @@ export class TurboDocxApi implements ICredentialType {
 		properties: {
 			headers: {
 				Authorization: '=Bearer {{$credentials.apiKey}}',
+				'x-rapiddocx-org-id': '={{$credentials.orgId}}',
 			},
 		},
 	};

@@ -1,0 +1,51 @@
+# This workflow publishes the package to npm when a GitHub release is created
+# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+
+name: TurboDocx n8n Node - NPM Release
+
+on:
+  release:
+    types: [created]  # Trigger when a new release is published on GitHub
+
+jobs:
+  # Build and validate the package before publishing
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Install dependencies with clean install (respects package-lock.json exactly)
+      - run: npm ci
+
+      # Build the TypeScript code
+      - run: npm run build
+
+      # Run linter to validate code quality
+      - run: npm run lint
+
+  # Publish the package to npm registry (only runs if build job passes)
+  publish-npm:
+    needs: build  # Wait for build to pass before publishing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/  # Configure npm registry for publishing
+
+      # Install dependencies
+      - run: npm ci
+
+      # Build the production bundle
+      - run: npm run build
+
+      # Publish to npm with public access (scoped packages are private by default)
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}  # Use npm token from GitHub secrets
