@@ -1,0 +1,57 @@
+{
+    "name": "@turbodocx/n8n-nodes-turbodocx",
+    "version": "0.1.0",
+    "description": "n8n node for TurboDocx API - Document & Presentation Generation and TurboSign digital signatures",
+    "license": "MIT",
+    "homepage": "https://turbodocx.com",
+    "keywords": [
+        "n8n-community-node-package",
+        "n8n",
+        "turbodocx",
+        "turbosign",
+        "pdf",
+        "signatures",
+        "documents"
+    ],
+    "author": {
+        "name": "TurboDocx",
+        "email": "team@turbodocx.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/turbodocx/n8n-nodes-turbodocx.git"
+    },
+    "scripts": {
+        "build": "n8n-node build",
+        "build:watch": "tsc --watch",
+        "dev": "n8n-node dev",
+        "lint": "n8n-node lint",
+        "lint:fix": "n8n-node lint --fix",
+        "release": "n8n-node release",
+        "prepublishOnly": "n8n-node prerelease"
+    },
+    "files": [
+        "dist"
+    ],
+    "n8n": {
+        "n8nNodesApiVersion": 1,
+        "strict": true,
+        "credentials": [
+            "dist/credentials/TurboDocxApi.credentials.js"
+        ],
+        "nodes": [
+            "dist/nodes/TurboDocx/TurboDocx.node.js"
+        ]
+    },
+    "devDependencies": {
+        "@n8n/node-cli": "*",
+        "@types/node": "^24.10.1",
+        "eslint": "9.32.0",
+        "prettier": "3.6.2",
+        "release-it": "^19.0.4",
+        "typescript": "5.9.2"
+    },
+    "peerDependencies": {
+        "n8n-workflow": "*"
+    }
+}
