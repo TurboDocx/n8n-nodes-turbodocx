@@ -4,7 +4,44 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
+	IDataObject,
 } from 'n8n-workflow';
+
+// Additional fields configuration
+interface ITurboSignAdditionalFields {
+	documentName?: string;
+	documentDescription?: string;
+	senderName?: string;
+	senderEmail?: string;
+	ccEmails?: string;
+}
+
+// Request body for TurboSign API
+interface ITurboSignRequestBody extends IDataObject {
+	recipients: string;
+	fields: string;
+	documentName?: string;
+	documentDescription?: string;
+	senderName?: string;
+	senderEmail?: string;
+	ccEmails?: string;
+	file?: {
+		value: Buffer;
+		options: {
+			filename: string;
+			contentType: string;
+		};
+	};
+	fileLink?: string;
+	deliverableId?: string;
+	templateId?: string;
+}
+
+// Validation error structure
+interface IValidationError {
+	path?: string[];
+	message: string;
+}
 
 export class TurboDocx implements INodeType {
 	description: INodeTypeDescription = {
@@ -14,7 +51,8 @@ export class TurboDocx implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Interact with TurboDocx API for document generation and TurboSign digital signatures',
+		description:
+			'Interact with TurboDocx API for document generation and TurboSign digital signatures',
 		defaults: {
 			name: 'TurboDocx',
 		},
@@ -57,16 +95,10 @@ export class TurboDocx implements INodeType {
 				},
 				options: [
 					{
-						name: 'TurboSign: Prepare for Review',
-						value: 'prepareForReview',
-						description: 'Upload a document with fields and recipients, get preview URL (no emails sent)',
-						action: 'Prepare document for review',
-					},
-					{
-						name: 'TurboSign: Prepare for Signing',
-						value: 'prepareForSigning',
-						description: 'Upload a document with fields and recipients, send signature request emails',
-						action: 'Prepare document for signing',
+						name: 'TurboSign: Download Document',
+						value: 'downloadDocument',
+						description: 'Download the signed PDF document',
+						action: 'Download signed document',
 					},
 					{
 						name: 'TurboSign: Get Document Status',
@@ -75,16 +107,18 @@ export class TurboDocx implements INodeType {
 						action: 'Get document status',
 					},
 					{
-						name: 'TurboSign: Download Document',
-						value: 'downloadDocument',
-						description: 'Download the signed PDF document',
-						action: 'Download signed document',
+						name: 'TurboSign: Prepare for Review',
+						value: 'prepareForReview',
+						description:
+							'Upload a document with fields and recipients, get preview URL (no emails sent)',
+						action: 'Prepare document for review',
 					},
 					{
-						name: 'TurboSign: Void Document',
-						value: 'voidDocument',
-						description: 'Cancel a signature request',
-						action: 'Void signature document',
+						name: 'TurboSign: Prepare for Signing',
+						value: 'prepareForSigning',
+						description:
+							'Upload a document with fields and recipients, send signature request emails',
+						action: 'Prepare document for signing',
 					},
 					{
 						name: 'TurboSign: Resend Email',
@@ -92,7 +126,14 @@ export class TurboDocx implements INodeType {
 						description: 'Resend signature request emails to specific recipients',
 						action: 'Resend signature request email',
 					},
+					{
+						name: 'TurboSign: Void Document',
+						value: 'voidDocument',
+						description: 'Cancel a signature request',
+						action: 'Void signature document',
+					},
 				],
+
 				default: 'prepareForSigning',
 			},
 
@@ -147,7 +188,8 @@ export class TurboDocx implements INodeType {
 					},
 				},
 				default: 'data',
-				description: 'The input binary field containing the file to process (supports PDF, DOCX, PPTX)',
+				description:
+					'The input binary field containing the file to process (supports PDF, DOCX, PPTX)',
 				required: true,
 				hint: 'Select the binary field from a previous node (e.g., from Read Binary File node)',
 			},
@@ -207,9 +249,11 @@ export class TurboDocx implements INodeType {
 					},
 				},
 				default: '[]',
-				description: 'JSON array of recipients with name, email, signingOrder, and metadata (color, lightColor)',
+				description:
+					'JSON array of recipients with name, email, signingOrder, and metadata (color, lightColor)',
 				required: true,
-				placeholder: '[{"name":"John Doe","email":"john@example.com","signingOrder":1,"metadata":{"color":"hsl(210, 50%, 50%)","lightColor":"hsl(210, 50%, 90%)"}}]',
+				placeholder:
+					'[{"name":"John Doe","email":"john@example.com","signingOrder":1,"metadata":{"color":"hsl(210, 50%, 50%)","lightColor":"hsl(210, 50%, 90%)"}}]',
 			},
 			{
 				displayName: 'Fields',
@@ -222,9 +266,11 @@ export class TurboDocx implements INodeType {
 					},
 				},
 				default: '[]',
-				description: 'JSON array of signature fields with recipientId, type, and coordinates or template anchor',
+				description:
+					'JSON array of signature fields with recipientId, type, and coordinates or template anchor',
 				required: true,
-				placeholder: '[{"recipientId":"uuid","type":"signature","page":1,"x":100,"y":200,"width":150,"height":50}]',
+				placeholder:
+					'[{"recipientId":"uuid","type":"signature","page":1,"x":100,"y":200,"width":150,"height":50}]',
 			},
 			{
 				displayName: 'Additional Fields',
@@ -240,11 +286,12 @@ export class TurboDocx implements INodeType {
 				},
 				options: [
 					{
-						displayName: 'Document Name',
-						name: 'documentName',
-						type: 'string',
-						default: '',
-						description: 'Name for the signature document',
+						displayName: 'CC Emails',
+						name: 'ccEmails',
+						type: 'json',
+						default: '[]',
+						description: 'JSON array of email addresses to CC when document is completed (max 10)',
+						placeholder: '["admin@company.com", "records@company.com"]',
 					},
 					{
 						displayName: 'Document Description',
@@ -254,11 +301,11 @@ export class TurboDocx implements INodeType {
 						description: 'Description for the signature document',
 					},
 					{
-						displayName: 'Sender Name',
-						name: 'senderName',
+						displayName: 'Document Name',
+						name: 'documentName',
 						type: 'string',
 						default: '',
-						description: 'Name of the sender (displayed in emails)',
+						description: 'Name for the signature document',
 					},
 					{
 						displayName: 'Sender Email',
@@ -268,12 +315,11 @@ export class TurboDocx implements INodeType {
 						description: 'Email address of the sender',
 					},
 					{
-						displayName: 'CC Emails',
-						name: 'ccEmails',
-						type: 'json',
-						default: '[]',
-						description: 'JSON array of email addresses to CC when document is completed (max 10)',
-						placeholder: '["admin@company.com", "records@company.com"]',
+						displayName: 'Sender Name',
+						name: 'senderName',
+						type: 'string',
+						default: '',
+						description: 'Name of the sender (displayed in emails)',
 					},
 				],
 			},
@@ -333,8 +379,8 @@ export class TurboDocx implements INodeType {
 				placeholder: '["uuid1", "uuid2"]',
 			},
 		],
+		usableAsTool: true,
 	};
-
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
@@ -354,18 +400,22 @@ export class TurboDocx implements INodeType {
 						const fileInputMethod = this.getNodeParameter('fileInputMethod', i) as string;
 						const recipients = this.getNodeParameter('recipients', i) as string;
 						const fields = this.getNodeParameter('fields', i) as string;
-						const additionalFields = this.getNodeParameter('additionalFields', i, {}) as any;
+						const additionalFields = this.getNodeParameter('additionalFields', i, {}) as ITurboSignAdditionalFields;
 
 						// Build request body using n8n's built-in multipart/form-data support
-						const requestBody: any = {
+						const requestBody: ITurboSignRequestBody = {
 							recipients,
 							fields,
 						};
-						if (additionalFields.documentName) requestBody.documentName = additionalFields.documentName;
-						if (additionalFields.documentDescription) requestBody.documentDescription = additionalFields.documentDescription;
+						if (additionalFields.documentName)
+							requestBody.documentName = additionalFields.documentName;
+						if (additionalFields.documentDescription)
+							requestBody.documentDescription = additionalFields.documentDescription;
 						if (additionalFields.senderName) requestBody.senderName = additionalFields.senderName;
-						if (additionalFields.senderEmail) requestBody.senderEmail = additionalFields.senderEmail;
-						if (additionalFields.ccEmails && additionalFields.ccEmails !== '') requestBody.ccEmails = additionalFields.ccEmails;
+						if (additionalFields.senderEmail)
+							requestBody.senderEmail = additionalFields.senderEmail;
+						if (additionalFields.ccEmails && additionalFields.ccEmails !== '')
+							requestBody.ccEmails = additionalFields.ccEmails;
 
 						// Handle file input based on method
 						if (fileInputMethod === 'upload') {
@@ -406,7 +456,7 @@ export class TurboDocx implements INodeType {
 							},
 						);
 
-						returnData.push({ json: response as any });
+						returnData.push({ json: response as IDataObject });
 					}
 
 					// ===============================
@@ -416,18 +466,22 @@ export class TurboDocx implements INodeType {
 						const fileInputMethod = this.getNodeParameter('fileInputMethod', i) as string;
 						const recipients = this.getNodeParameter('recipients', i) as string;
 						const fields = this.getNodeParameter('fields', i) as string;
-						const additionalFields = this.getNodeParameter('additionalFields', i, {}) as any;
+						const additionalFields = this.getNodeParameter('additionalFields', i, {}) as ITurboSignAdditionalFields;
 
 						// Build request body using n8n's built-in multipart/form-data support
-						const requestBody: any = {
+						const requestBody: ITurboSignRequestBody = {
 							recipients,
 							fields,
 						};
-						if (additionalFields.documentName) requestBody.documentName = additionalFields.documentName;
-						if (additionalFields.documentDescription) requestBody.documentDescription = additionalFields.documentDescription;
+						if (additionalFields.documentName)
+							requestBody.documentName = additionalFields.documentName;
+						if (additionalFields.documentDescription)
+							requestBody.documentDescription = additionalFields.documentDescription;
 						if (additionalFields.senderName) requestBody.senderName = additionalFields.senderName;
-						if (additionalFields.senderEmail) requestBody.senderEmail = additionalFields.senderEmail;
-						if (additionalFields.ccEmails && additionalFields.ccEmails !== '') requestBody.ccEmails = additionalFields.ccEmails;
+						if (additionalFields.senderEmail)
+							requestBody.senderEmail = additionalFields.senderEmail;
+						if (additionalFields.ccEmails && additionalFields.ccEmails !== '')
+							requestBody.ccEmails = additionalFields.ccEmails;
 
 						// Handle file input based on method
 						if (fileInputMethod === 'upload') {
@@ -468,7 +522,7 @@ export class TurboDocx implements INodeType {
 							},
 						);
 
-						returnData.push({ json: response as any });
+						returnData.push({ json: response as IDataObject });
 					}
 
 					// ===============================
@@ -486,7 +540,7 @@ export class TurboDocx implements INodeType {
 							},
 						);
 
-						returnData.push({ json: response as any });
+						returnData.push({ json: response as IDataObject });
 					}
 
 					// ===============================
@@ -540,7 +594,7 @@ export class TurboDocx implements INodeType {
 							},
 						);
 
-						returnData.push({ json: response as any });
+						returnData.push({ json: response as IDataObject });
 					}
 
 					// ===============================
@@ -563,7 +617,7 @@ export class TurboDocx implements INodeType {
 							},
 						);
 
-						returnData.push({ json: response as any });
+						returnData.push({ json: response as IDataObject });
 					}
 				}
 			} catch (error) {
@@ -584,7 +638,8 @@ export class TurboDocx implements INodeType {
 
 				// Extract error details from various possible locations
 				const statusCode = error.statusCode || error.httpCode || error.response?.status;
-				const backendResponse = error.response?.body || error.cause?.response?.body || error.cause?.body;
+				const backendResponse =
+					error.response?.body || error.cause?.response?.body || error.cause?.body;
 
 				// Build user-friendly error message
 				let errorMessage = error.message || 'Unknown error occurred';
@@ -596,7 +651,7 @@ export class TurboDocx implements INodeType {
 				// Check if this is a Joi ValidationError with detailed field errors
 				if (backendResponse?.type === 'ValidationError' && backendResponse?.data?.errors) {
 					errorMessage += '\n\nValidation Errors:';
-					backendResponse.data.errors.forEach((err: any) => {
+					(backendResponse.data.errors as IValidationError[]).forEach((err) => {
 						const fieldPath = err.path?.join('.') || 'unknown';
 						errorMessage += `\n  • ${fieldPath}: ${err.message}`;
 					});
@@ -615,7 +670,10 @@ export class TurboDocx implements INodeType {
 
 				throw new NodeOperationError(this.getNode(), errorMessage, {
 					itemIndex: i,
-					description: backendResponse?.message || error.description || 'Check the error details above for more information',
+					description:
+						backendResponse?.message ||
+						error.description ||
+						'Check the error details above for more information',
 				});
 			}
 		}

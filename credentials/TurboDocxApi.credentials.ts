@@ -1,3 +1,4 @@
+import type { Icon } from 'n8n-workflow';
 import {
 	IAuthenticateGeneric,
 	ICredentialTestRequest,
@@ -9,6 +10,7 @@ export class TurboDocxApi implements ICredentialType {
 	name = 'turboDocxApi';
 	displayName = 'TurboDocx API';
 	documentationUrl = 'https://docs.turbodocx.com';
+	icon: Icon = 'file:../nodes/TurboDocx/turbodocx.svg';
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Key',
