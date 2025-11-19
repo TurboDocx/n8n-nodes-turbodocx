@@ -1,6 +1,6 @@
 {
     "name": "@turbodocx/n8n-nodes-turbodocx",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "description": "n8n node for TurboDocx API - Document & Presentation Generation and TurboSign digital signatures",
     "license": "MIT",
     "homepage": "https://turbodocx.com",
@@ -9,14 +9,29 @@
         "n8n",
         "turbodocx",
         "turbosign",
+        "esignature",
+        "e-signature",
+        "digital-signature",
+        "electronic-signature",
+        "pdf-signature",
+        "document-signing",
         "pdf",
         "signatures",
-        "documents"
+        "documents",
+        "docx",
+        "html-to-docx",
+        "document-generation",
+        "document-automation",
+        "workflow",
+        "automation",
+        "api",
+        "pptx",
+        "presentations",
+        "templates",
+        "word",
+        "powerpoint"
     ],
-    "author": {
-        "name": "TurboDocx",
-        "email": "team@turbodocx.com"
-    },
+    "author": "TurboDocx",
     "repository": {
         "type": "git",
         "url": "https://github.com/turbodocx/n8n-nodes-turbodocx.git"
