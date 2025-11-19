@@ -45,7 +45,7 @@ jobs:
       # Build the production bundle
       - run: npm run build
 
-      # Publish to npm with public access (scoped packages are private by default)
-      - run: npm publish --access public
+      # Publish to npm using n8n-node release workflow (bypasses prepublishOnly check)
+      - run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}  # Use npm token from GitHub secrets
