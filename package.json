@@ -31,7 +31,9 @@
         "word",
         "powerpoint"
     ],
-    "author": "TurboDocx",
+    "author": {
+        "name": "TurboDocx"
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/turbodocx/n8n-nodes-turbodocx.git"
