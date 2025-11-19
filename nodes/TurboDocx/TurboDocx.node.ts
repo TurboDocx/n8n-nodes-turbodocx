@@ -450,9 +450,6 @@ export class TurboDocx implements INodeType {
 								method: 'POST',
 								url: `${baseUrl}/turbosign/single/prepare-for-review`,
 								body: requestBody,
-								headers: {
-									'Content-Type': 'multipart/form-data',
-								},
 							},
 						);
 
@@ -516,9 +513,6 @@ export class TurboDocx implements INodeType {
 								method: 'POST',
 								url: `${baseUrl}/turbosign/single/prepare-for-signing`,
 								body: requestBody,
-								headers: {
-									'Content-Type': 'multipart/form-data',
-								},
 							},
 						);
 
