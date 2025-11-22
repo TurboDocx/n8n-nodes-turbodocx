@@ -53,5 +53,8 @@ jobs:
       # Build the production bundle
       - run: npm run build
 
-      # Publish to npm with provenance (OIDC trusted publishing - no token required)
+      # Publish to npm with provenance (OIDC trusted publishing)
+      # Explicitly unset NODE_AUTH_TOKEN to force OIDC authentication
       - run: npm publish --access public --provenance --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ''
