@@ -3,9 +3,13 @@
 @turbodocx/n8n-nodes-turbodocx
 ====================
 [![NPM Version][npm-image]][npm-url]
+[![CodeQL](https://github.com/TurboDocx/n8n-nodes-turbodocx/workflows/CodeQL/badge.svg)](https://github.com/TurboDocx/n8n-nodes-turbodocx/actions/workflows/codeql.yml)
+[![GitHub Stars](https://img.shields.io/github/stars/turbodocx/n8n-nodes-turbodocx?style=social)](https://github.com/turbodocx/n8n-nodes-turbodocx)
 [![Type Script](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
+[![npm](https://img.shields.io/npm/dm/@turbodocx/n8n-nodes-turbodocx)](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx)
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
+[![Embed TurboDocx in Your App in Minutes](https://img.shields.io/badge/Embed%20TurboDocx%20in%20Your%20App%20in%20Minutes-8A2BE2)](https://www.turbodocx.com/use-cases/embedded-api?utm_source=github&utm_medium=repo&utm_campaign=open_source)
 
 Automate TurboDocx API and TurboSign digital signatures in your n8n workflows. Send signature requests, track document status, and download signed PDFs—all without writing code.
 
