@@ -1,6 +1,6 @@
 {
     "name": "@turbodocx/n8n-nodes-turbodocx",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "n8n node for TurboDocx API - Document & Presentation Generation and TurboSign digital signatures",
     "license": "MIT",
     "homepage": "https://turbodocx.com",
