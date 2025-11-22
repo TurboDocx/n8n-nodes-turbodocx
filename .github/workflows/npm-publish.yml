@@ -1,11 +1,16 @@
 # This workflow publishes the package to npm when a GitHub release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+# Uses OIDC trusted publishing with provenance for secure, tokenless authentication
+# For more information see: https://docs.npmjs.com/generating-provenance-statements
 
 name: TurboDocx n8n Node - NPM Release
 
 on:
   release:
     types: [created]  # Trigger when a new release is published on GitHub
+
+permissions:
+  id-token: write    # Required for OIDC trusted publishing
+  contents: read     # Required to checkout code
 
 jobs:
   # Build and validate the package before publishing
@@ -31,6 +36,9 @@ jobs:
   publish-npm:
     needs: build  # Wait for build to pass before publishing
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write    # Required for OIDC trusted publishing
+      contents: read     # Required to checkout code
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +53,5 @@ jobs:
       # Build the production bundle
       - run: npm run build
 
-      # Publish to npm using n8n-node release workflow (bypasses prepublishOnly check)
-      - run: npm publish --access public --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}  # Use npm token from GitHub secrets
+      # Publish to npm with provenance (OIDC trusted publishing - no token required)
+      - run: npm publish --access public --provenance --ignore-scripts
