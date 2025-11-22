@@ -32,7 +32,8 @@
         "powerpoint"
     ],
     "author": {
-        "name": "TurboDocx"
+        "name": "TurboDocx",
+        "email": "team@turbodocx.com"
     },
     "repository": {
         "type": "git",
@@ -44,6 +45,7 @@
         "dev": "n8n-node dev",
         "lint": "n8n-node lint",
         "lint:fix": "n8n-node lint --fix",
+        "test": "echo \"No tests configured\" && exit 0",
         "release": "n8n-node release",
         "prepublishOnly": "npm run build"
     },
