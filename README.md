@@ -330,6 +330,12 @@ For issues or questions:
 - **GitHub Issues**: [https://github.com/turbodocx/n8n-nodes-turbodocx/issues](https://github.com/turbodocx/n8n-nodes-turbodocx/issues)
 - **Discord**: [Join our community](https://discord.gg/NYKwz4BcpX)
 
+## Related Packages
+
+| Package | Description |
+|---------|-------------|
+| [@turbodocx/html-to-docx](https://www.npmjs.com/package/@turbodocx/html-to-docx) | Convert HTML to Word documents |
+
 ## License
 
 [MIT](LICENSE)
