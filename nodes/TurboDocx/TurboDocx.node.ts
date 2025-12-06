@@ -44,7 +44,7 @@ export class TurboDocx implements INodeType {
 		icon: 'file:turbodocx.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+		subtitle: '={{ $parameter["operation"] === "downloadDocument" ? "Download Signed Document" : $parameter["operation"] === "getStatus" ? "Get Document Status" : $parameter["operation"] === "prepareForReview" ? "Prepare Document for Review" : $parameter["operation"] === "prepareForSigning" ? "Prepare Document for Signing" : $parameter["operation"] === "resendEmail" ? "Resend Signature Request Email" : $parameter["operation"] === "voidDocument" ? "Void Signature Document" : "TurboDocx" }}',
 		description:
 			'Interact with TurboDocx API for document generation and TurboSign digital signatures',
 		defaults: {
