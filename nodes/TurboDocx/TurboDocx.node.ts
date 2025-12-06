@@ -248,12 +248,13 @@ export class TurboDocx implements INodeType {
 						operation: ['prepareForReview', 'prepareForSigning'],
 					},
 				},
-				default: '[]',
+				default: '',
 				description:
 					'JSON array of recipients with name, email, signingOrder, and metadata (color, lightColor)',
 				required: true,
 				placeholder:
-					'[{"name":"Nicolas","email":"nicolas@turbodocx.com","signingOrder":1},{"name":"Nicolas Fry","email":"nicolas.fry@turbodocx.com","signingOrder":2}]',
+					'[{"name":"Sales Rep","email":"sales@example.com","signingOrder":1},{"name":"Client Name","email":"client@example.com","signingOrder":2}]',
+				hint: 'Example: [{"name":"Sales Rep","email":"sales@example.com","signingOrder":1},{"name":"Client Name","email":"client@example.com","signingOrder":2}]',
 			},
 			{
 				displayName: 'Fields',
@@ -265,12 +266,13 @@ export class TurboDocx implements INodeType {
 						operation: ['prepareForReview', 'prepareForSigning'],
 					},
 				},
-				default: '[]',
+				default: '',
 				description:
-					'JSON array of signature fields with recipientId, type, and coordinates or template anchor',
+					'JSON array of signature fields with recipientEmail, type, and template anchor',
 				required: true,
 				placeholder:
-					'[{"recipientEmail":"nicolas@turbodocx.com","type":"full_name","template":{"anchor":"{SalesFullName}","placement":"replace","size":{"width":200,"height":30}}},{"recipientEmail":"nicolas@turbodocx.com","type":"date","template":{"anchor":"{SalesDate}","placement":"replace","size":{"width":150,"height":30}}},{"recipientEmail":"nicolas@turbodocx.com","type":"signature","template":{"anchor":"{SalesSigner}","placement":"replace","size":{"width":200,"height":50}}},{"recipientEmail":"nicolas.fry@turbodocx.com","type":"full_name","template":{"anchor":"{ClientFullName}","placement":"replace","size":{"width":200,"height":30}}},{"recipientEmail":"nicolas.fry@turbodocx.com","type":"date","template":{"anchor":"{ClientDate}","placement":"replace","size":{"width":150,"height":30}}},{"recipientEmail":"nicolas.fry@turbodocx.com","type":"signature","template":{"anchor":"{ClientSigner}","placement":"replace","size":{"width":200,"height":50}}}]',
+					'[{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{Signature1}","placement":"replace","size":{"width":200,"height":50}}}]',
+				hint: 'Example: [{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{SalesSigner}","placement":"replace","size":{"width":200,"height":50}}},{"recipientEmail":"client@example.com","type":"signature","template":{"anchor":"{ClientSigner}","placement":"replace","size":{"width":200,"height":50}}}]',
 			},
 			{
 				displayName: 'Additional Fields',
@@ -373,10 +375,11 @@ export class TurboDocx implements INodeType {
 						operation: ['resendEmail'],
 					},
 				},
-				default: '[]',
+				default: '',
 				description: 'JSON array of recipient UUIDs to resend emails to',
 				required: true,
 				placeholder: '["5f673f37-9912-4e72-85aa-8f3649760f6b"]',
+				hint: 'Example: ["5f673f37-9912-4e72-85aa-8f3649760f6b"]',
 			},
 		],
 		usableAsTool: true,
