@@ -89,39 +89,39 @@ export class TurboDocx implements INodeType {
 				},
 				options: [
 					{
-						name: 'TurboSign: Download Document',
+						name: 'Download signed document',
 						value: 'downloadDocument',
 						description: 'Download the signed PDF document',
 						action: 'Download signed document',
 					},
 					{
-						name: 'TurboSign: Get Document Status',
+						name: 'Get document status',
 						value: 'getStatus',
 						description: 'Get the current status of a signature document',
 						action: 'Get document status',
 					},
 					{
-						name: 'TurboSign: Prepare for Review',
+						name: 'Prepare document for review',
 						value: 'prepareForReview',
 						description:
 							'Upload a document with fields and recipients, get preview URL (no emails sent)',
 						action: 'Prepare document for review',
 					},
 					{
-						name: 'TurboSign: Prepare for Signing',
+						name: 'Prepare document for signing',
 						value: 'prepareForSigning',
 						description:
 							'Upload a document with fields and recipients, send signature request emails',
 						action: 'Prepare document for signing',
 					},
 					{
-						name: 'TurboSign: Resend Email',
+						name: 'Resend signature request email',
 						value: 'resendEmail',
 						description: 'Resend signature request emails to specific recipients',
 						action: 'Resend signature request email',
 					},
 					{
-						name: 'TurboSign: Void Document',
+						name: 'Void signature document',
 						value: 'voidDocument',
 						description: 'Cancel a signature request',
 						action: 'Void signature document',
