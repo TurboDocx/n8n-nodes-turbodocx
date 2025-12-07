@@ -37,12 +37,6 @@ interface ITurboSignRequestBody extends IDataObject {
 	templateId?: string;
 }
 
-// Validation error structure
-interface IValidationError {
-	path?: string[];
-	message: string;
-}
-
 export class TurboDocx implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'TurboDocx',
@@ -50,7 +44,7 @@ export class TurboDocx implements INodeType {
 		icon: 'file:turbodocx.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+		subtitle: '={{ $parameter["operation"] === "downloadDocument" ? "Download signed document" : $parameter["operation"] === "getStatus" ? "Get document status" : $parameter["operation"] === "prepareForReview" ? "Prepare document for review" : $parameter["operation"] === "prepareForSigning" ? "Prepare document for signing" : $parameter["operation"] === "resendEmail" ? "Resend signature request email" : $parameter["operation"] === "voidDocument" ? "Void signature document" : "TurboDocx" }}',
 		description:
 			'Interact with TurboDocx API for document generation and TurboSign digital signatures',
 		defaults: {
@@ -107,21 +101,21 @@ export class TurboDocx implements INodeType {
 						action: 'Get document status',
 					},
 					{
-						name: 'TurboSign: Prepare for Review',
+						name: 'TurboSign: Prepare For Review',
 						value: 'prepareForReview',
 						description:
 							'Upload a document with fields and recipients, get preview URL (no emails sent)',
 						action: 'Prepare document for review',
 					},
 					{
-						name: 'TurboSign: Prepare for Signing',
+						name: 'TurboSign: Prepare For Signing',
 						value: 'prepareForSigning',
 						description:
 							'Upload a document with fields and recipients, send signature request emails',
 						action: 'Prepare document for signing',
 					},
 					{
-						name: 'TurboSign: Resend Email',
+						name: 'TurboSign: Resend Signature Request Email',
 						value: 'resendEmail',
 						description: 'Resend signature request emails to specific recipients',
 						action: 'Resend signature request email',
@@ -248,12 +242,13 @@ export class TurboDocx implements INodeType {
 						operation: ['prepareForReview', 'prepareForSigning'],
 					},
 				},
-				default: '[]',
+				default: '',
 				description:
 					'JSON array of recipients with name, email, signingOrder, and metadata (color, lightColor)',
 				required: true,
 				placeholder:
-					'[{"name":"John Doe","email":"john@example.com","signingOrder":1,"metadata":{"color":"hsl(210, 50%, 50%)","lightColor":"hsl(210, 50%, 90%)"}}]',
+					'[{"name":"Sales Rep","email":"sales@example.com","signingOrder":1},{"name":"Client Name","email":"client@example.com","signingOrder":2}]',
+				hint: 'Example: [{"name":"Sales Rep","email":"sales@example.com","signingOrder":1},{"name":"Client Name","email":"client@example.com","signingOrder":2}]',
 			},
 			{
 				displayName: 'Fields',
@@ -265,12 +260,13 @@ export class TurboDocx implements INodeType {
 						operation: ['prepareForReview', 'prepareForSigning'],
 					},
 				},
-				default: '[]',
+				default: '',
 				description:
-					'JSON array of signature fields with recipientId, type, and coordinates or template anchor',
+					'JSON array of signature fields with recipientEmail, type, and template anchor',
 				required: true,
 				placeholder:
-					'[{"recipientId":"uuid","type":"signature","page":1,"x":100,"y":200,"width":150,"height":50}]',
+					'[{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{Signature1}","placement":"replace","size":{"width":200,"height":50}}}]',
+				hint: 'Example: [{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{SalesSigner}","placement":"replace","size":{"width":200,"height":50}}},{"recipientEmail":"client@example.com","type":"signature","template":{"anchor":"{ClientSigner}","placement":"replace","size":{"width":200,"height":50}}}]',
 			},
 			{
 				displayName: 'Additional Fields',
@@ -373,10 +369,11 @@ export class TurboDocx implements INodeType {
 						operation: ['resendEmail'],
 					},
 				},
-				default: '[]',
+				default: '',
 				description: 'JSON array of recipient UUIDs to resend emails to',
 				required: true,
-				placeholder: '["uuid1", "uuid2"]',
+				placeholder: '["5f673f37-9912-4e72-85aa-8f3649760f6b"]',
+				hint: 'Example: ["5f673f37-9912-4e72-85aa-8f3649760f6b"]',
 			},
 		],
 		usableAsTool: true,
@@ -450,10 +447,52 @@ export class TurboDocx implements INodeType {
 								method: 'POST',
 								url: `${baseUrl}/turbosign/single/prepare-for-review`,
 								body: requestBody,
+								ignoreHttpStatusErrors: true,
+								returnFullResponse: true,
 							},
 						);
 
-						returnData.push({ json: response as IDataObject });
+						// Check for HTTP errors and throw with proper message
+						const fullResponse = response as { statusCode: number; body: unknown };
+						if (fullResponse.statusCode >= 400) {
+							let errorBody = fullResponse.body as Record<string, unknown> | string;
+
+							// Parse body if it's a string
+							if (typeof errorBody === 'string') {
+								try {
+									errorBody = JSON.parse(errorBody) as Record<string, unknown>;
+								} catch {
+									// Keep as string if not valid JSON
+								}
+							}
+
+							// Extract detailed error message from TurboDocx API response format
+							// Format: { message: "...", type: "...", data?: { errors: [...] } }
+							let errorMessage = 'Request failed';
+							const errorCode = typeof errorBody === 'object' ? ((errorBody?.type as string) || (errorBody?.code as string) || '') : '';
+
+							// Check for validation errors with detailed error list
+							if (typeof errorBody === 'object' && errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+								const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
+									.map((e: { message?: string }) => e.message || JSON.stringify(e))
+									.join('; ');
+								errorMessage = errorDetails || (errorBody?.message as string) || 'Validation failed';
+							} else if (typeof errorBody === 'object' && errorBody?.error) {
+								// Some endpoints use { error: "...", code: "..." }
+								errorMessage = errorBody.error as string;
+							} else if (typeof errorBody === 'object' && errorBody?.message) {
+								// Standard format { message: "...", type: "..." }
+								errorMessage = errorBody.message as string;
+							}
+
+							throw new NodeOperationError(
+								this.getNode(),
+								`${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${fullResponse.statusCode}`,
+								{ itemIndex: i },
+							);
+						}
+
+						returnData.push({ json: fullResponse.body as IDataObject });
 					}
 
 					// ===============================
@@ -513,10 +552,48 @@ export class TurboDocx implements INodeType {
 								method: 'POST',
 								url: `${baseUrl}/turbosign/single/prepare-for-signing`,
 								body: requestBody,
+								ignoreHttpStatusErrors: true,
+								returnFullResponse: true,
 							},
 						);
 
-						returnData.push({ json: response as IDataObject });
+						// Check for HTTP errors and throw with proper message
+						const fullResponse = response as { statusCode: number; body: unknown };
+						if (fullResponse.statusCode >= 400) {
+							let errorBody = fullResponse.body as Record<string, unknown> | string;
+
+							// Parse body if it's a string
+							if (typeof errorBody === 'string') {
+								try {
+									errorBody = JSON.parse(errorBody) as Record<string, unknown>;
+								} catch {
+									// Keep as string if not valid JSON
+								}
+							}
+
+							// Extract detailed error message from TurboDocx API response format
+							let errorMessage = 'Request failed';
+							const errorCode = typeof errorBody === 'object' ? ((errorBody?.type as string) || (errorBody?.code as string) || '') : '';
+
+							if (typeof errorBody === 'object' && errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+								const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
+									.map((e: { message?: string }) => e.message || JSON.stringify(e))
+									.join('; ');
+								errorMessage = errorDetails || (errorBody?.message as string) || 'Validation failed';
+							} else if (typeof errorBody === 'object' && errorBody?.error) {
+								errorMessage = errorBody.error as string;
+							} else if (typeof errorBody === 'object' && errorBody?.message) {
+								errorMessage = errorBody.message as string;
+							}
+
+							throw new NodeOperationError(
+								this.getNode(),
+								`${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${fullResponse.statusCode}`,
+								{ itemIndex: i },
+							);
+						}
+
+						returnData.push({ json: fullResponse.body as IDataObject });
 					}
 
 					// ===============================
@@ -531,10 +608,45 @@ export class TurboDocx implements INodeType {
 							{
 								method: 'GET',
 								url: `${baseUrl}/turbosign/documents/${documentId}/status`,
+								ignoreHttpStatusErrors: true,
+								returnFullResponse: true,
 							},
 						);
 
-						returnData.push({ json: response as IDataObject });
+						const fullResponse = response as { statusCode: number; body: unknown };
+						if (fullResponse.statusCode >= 400) {
+							let errorBody = fullResponse.body as Record<string, unknown>;
+
+							if (typeof errorBody === 'string') {
+								try {
+									errorBody = JSON.parse(errorBody) as Record<string, unknown>;
+								} catch {
+									// Keep as string
+								}
+							}
+
+							let errorMessage = 'Request failed';
+							const errorCode = (errorBody?.type as string) || (errorBody?.code as string) || '';
+
+							if (errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+								const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
+									.map((e: { message?: string }) => e.message || JSON.stringify(e))
+									.join('; ');
+								errorMessage = errorDetails || (errorBody?.message as string) || 'Validation failed';
+							} else if (errorBody?.error) {
+								errorMessage = errorBody.error as string;
+							} else if (errorBody?.message) {
+								errorMessage = errorBody.message as string;
+							}
+
+							throw new NodeOperationError(
+								this.getNode(),
+								`${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${fullResponse.statusCode}`,
+								{ itemIndex: i },
+							);
+						}
+
+						returnData.push({ json: fullResponse.body as IDataObject });
 					}
 
 					// ===============================
@@ -551,11 +663,52 @@ export class TurboDocx implements INodeType {
 								url: `${baseUrl}/turbosign/documents/${documentId}/download`,
 								encoding: 'arraybuffer',
 								json: false,
+								ignoreHttpStatusErrors: true,
+								returnFullResponse: true,
 							},
 						);
 
+						const fullResponse = response as { statusCode: number; body: unknown; headers: unknown };
+						if (fullResponse.statusCode >= 400) {
+							let errorBody: string | Record<string, unknown> = fullResponse.body as string | Record<string, unknown>;
+
+							// Try to parse error body if it's a buffer/string
+							if (Buffer.isBuffer(errorBody)) {
+								errorBody = errorBody.toString('utf-8');
+							}
+							if (typeof errorBody === 'string') {
+								try {
+									errorBody = JSON.parse(errorBody) as Record<string, unknown>;
+								} catch {
+									// Keep as string
+								}
+							}
+
+							// Extract detailed error message (same pattern as other operations)
+							let errorMessage = 'Request failed';
+							const errorCode = typeof errorBody === 'object' ? ((errorBody?.type as string) || (errorBody?.code as string) || '') : '';
+
+							if (typeof errorBody === 'object' && errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+								const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
+									.map((e: { message?: string }) => e.message || JSON.stringify(e))
+									.join('; ');
+								errorMessage = errorDetails || (errorBody?.message as string) || 'Download failed';
+							} else if (typeof errorBody === 'object' && errorBody?.error) {
+								errorMessage = errorBody.error as string;
+							} else if (typeof errorBody === 'object' && errorBody?.message) {
+								errorMessage = errorBody.message as string;
+							}
+
+							throw new NodeOperationError(
+								this.getNode(),
+								`${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${fullResponse.statusCode}`,
+								{ itemIndex: i },
+							);
+						}
+
+						// Success - extract buffer from response body
 						const binaryData = await this.helpers.prepareBinaryData(
-							response as Buffer,
+							fullResponse.body as Buffer,
 							`signed-document-${documentId}.pdf`,
 							'application/pdf',
 						);
@@ -585,10 +738,45 @@ export class TurboDocx implements INodeType {
 									reason: voidReason,
 								},
 								json: true,
+								ignoreHttpStatusErrors: true,
+								returnFullResponse: true,
 							},
 						);
 
-						returnData.push({ json: response as IDataObject });
+						const fullResponse = response as { statusCode: number; body: unknown };
+						if (fullResponse.statusCode >= 400) {
+							let errorBody = fullResponse.body as Record<string, unknown>;
+
+							if (typeof errorBody === 'string') {
+								try {
+									errorBody = JSON.parse(errorBody) as Record<string, unknown>;
+								} catch {
+									// Keep as string
+								}
+							}
+
+							let errorMessage = 'Request failed';
+							const errorCode = (errorBody?.type as string) || (errorBody?.code as string) || '';
+
+							if (errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+								const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
+									.map((e: { message?: string }) => e.message || JSON.stringify(e))
+									.join('; ');
+								errorMessage = errorDetails || (errorBody?.message as string) || 'Validation failed';
+							} else if (errorBody?.error) {
+								errorMessage = errorBody.error as string;
+							} else if (errorBody?.message) {
+								errorMessage = errorBody.message as string;
+							}
+
+							throw new NodeOperationError(
+								this.getNode(),
+								`${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${fullResponse.statusCode}`,
+								{ itemIndex: i },
+							);
+						}
+
+						returnData.push({ json: fullResponse.body as IDataObject });
 					}
 
 					// ===============================
@@ -598,6 +786,18 @@ export class TurboDocx implements INodeType {
 						const documentId = this.getNodeParameter('documentId', i) as string;
 						const recipientIds = this.getNodeParameter('recipientIds', i) as string;
 
+						// Parse recipientIds with error handling
+						let parsedRecipientIds: string[];
+						try {
+							parsedRecipientIds = JSON.parse(recipientIds);
+						} catch (parseError) {
+							throw new NodeOperationError(
+								this.getNode(),
+								`Invalid JSON in recipientIds: ${(parseError as Error).message}\n\nHTTP Status: 400`,
+								{ itemIndex: i },
+							);
+						}
+
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
 							'turboDocxApi',
@@ -605,70 +805,131 @@ export class TurboDocx implements INodeType {
 								method: 'POST',
 								url: `${baseUrl}/turbosign/documents/${documentId}/resend-email`,
 								body: {
-									recipientIds: JSON.parse(recipientIds),
+									recipientIds: parsedRecipientIds,
 								},
 								json: true,
+								ignoreHttpStatusErrors: true,
+								returnFullResponse: true,
 							},
 						);
 
-						returnData.push({ json: response as IDataObject });
+						const fullResponse2 = response as { statusCode: number; body: unknown };
+						if (fullResponse2.statusCode >= 400) {
+							let errorBody = fullResponse2.body as Record<string, unknown>;
+
+							if (typeof errorBody === 'string') {
+								try {
+									errorBody = JSON.parse(errorBody) as Record<string, unknown>;
+								} catch {
+									// Keep as string
+								}
+							}
+
+							let errorMessage = 'Request failed';
+							const errorCode = (errorBody?.type as string) || (errorBody?.code as string) || '';
+
+							if (errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+								const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
+									.map((e: { message?: string }) => e.message || JSON.stringify(e))
+									.join('; ');
+								errorMessage = errorDetails || (errorBody?.message as string) || 'Validation failed';
+							} else if (errorBody?.error) {
+								errorMessage = errorBody.error as string;
+							} else if (errorBody?.message) {
+								errorMessage = errorBody.message as string;
+							}
+
+							throw new NodeOperationError(
+								this.getNode(),
+								`${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${fullResponse2.statusCode}`,
+								{ itemIndex: i },
+							);
+						}
+
+						returnData.push({ json: fullResponse2.body as IDataObject });
 					}
 				}
 			} catch (error) {
+				// Re-throw NodeOperationError as-is (already formatted)
+				if (error instanceof NodeOperationError) {
+					if (this.continueOnFail()) {
+						returnData.push({
+							json: {
+								error: error.message,
+							},
+							pairedItem: { item: i },
+						});
+						continue;
+					}
+					throw error;
+				}
+
+				// Handle unexpected errors (e.g., from download endpoint or network issues)
+				const errorObj = error as {
+					httpCode?: number;
+					statusCode?: number;
+					cause?: { httpCode?: number; statusCode?: number; error?: unknown; response?: { body?: unknown } };
+					error?: unknown;
+					response?: { body?: unknown };
+					message?: string;
+				};
+				const statusCode =
+					errorObj.httpCode ||
+					errorObj.statusCode ||
+					errorObj.cause?.httpCode ||
+					errorObj.cause?.statusCode ||
+					400;
+
+				// Try to extract API response body from n8n's error structure
+				let backendResponse: Record<string, unknown> | null = null;
+				if (errorObj.error && typeof errorObj.error === 'object') {
+					backendResponse = errorObj.error as Record<string, unknown>;
+				} else if (errorObj.cause?.error && typeof errorObj.cause.error === 'object') {
+					backendResponse = errorObj.cause.error as Record<string, unknown>;
+				} else if (errorObj.response?.body) {
+					backendResponse = errorObj.response.body as Record<string, unknown>;
+				} else if (errorObj.cause?.response?.body) {
+					backendResponse = errorObj.cause.response.body as Record<string, unknown>;
+				}
+
+				const apiErrorMessage = (backendResponse?.error as string) || (backendResponse?.message as string);
+				const apiErrorCode = backendResponse?.code as string;
+
 				if (this.continueOnFail()) {
 					returnData.push({
 						json: {
-							error: error.message,
-							statusCode: error.statusCode || error.httpCode,
-							response: error.response?.body || error.response,
-							fullError: JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error))),
+							error: apiErrorMessage || errorObj.message,
+							code: apiErrorCode || 'UnknownError',
+							statusCode,
 						},
-						pairedItem: {
-							item: i,
-						},
+						pairedItem: { item: i },
 					});
 					continue;
 				}
 
-				// Extract error details from various possible locations
-				const statusCode = error.statusCode || error.httpCode || error.response?.status;
-				const backendResponse =
-					error.response?.body || error.cause?.response?.body || error.cause?.body;
+				let errorMessage = apiErrorMessage || errorObj.message || 'Request failed';
+				const errorCode = (backendResponse?.type as string) || apiErrorCode || '';
 
-				// Build user-friendly error message
-				let errorMessage = error.message || 'Unknown error occurred';
+				// Handle validation errors from Celebrate/Joi - extract detailed messages
+				if (backendResponse?.data && typeof backendResponse.data === 'object' && Array.isArray((backendResponse.data as { errors?: unknown[] }).errors)) {
+					const errorDetails = ((backendResponse.data as { errors: { path?: string[]; message?: string }[] }).errors)
+						.map((e: { path?: string[]; message?: string }) => {
+							const fieldPath = e.path?.join('.') || 'unknown';
+							return `${fieldPath}: ${e.message}`;
+						})
+						.join('; ');
 
-				if (statusCode) {
-					errorMessage += `\n\nStatus Code: ${statusCode}`;
+					if (errorDetails) {
+						errorMessage = errorDetails;
+					}
 				}
 
-				// Check if this is a Joi ValidationError with detailed field errors
-				if (backendResponse?.type === 'ValidationError' && backendResponse?.data?.errors) {
-					errorMessage += '\n\nValidation Errors:';
-					(backendResponse.data.errors as IValidationError[]).forEach((err) => {
-						const fieldPath = err.path?.join('.') || 'unknown';
-						errorMessage += `\n  • ${fieldPath}: ${err.message}`;
-					});
-
-					// Add full validation details for debugging
-					errorMessage += '\n\nFull Validation Details:';
-					errorMessage += `\n${JSON.stringify(backendResponse.data.errors, null, 2)}`;
-				} else if (backendResponse) {
-					// For non-validation errors, show the full backend response
-					errorMessage += `\n\nBackend Response:\n${JSON.stringify(backendResponse, null, 2)}`;
-				} else {
-					// If we still don't have details, dump the entire error object
-					const errorDetails = JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error)));
-					errorMessage += `\n\nFull Error Details:\n${JSON.stringify(errorDetails, null, 2)}`;
+				if (errorCode) {
+					errorMessage += ` [${errorCode}]`;
 				}
+				errorMessage += `\n\nHTTP Status: ${statusCode}`;
 
-				throw new NodeOperationError(this.getNode(), errorMessage, {
-					itemIndex: i,
-					description:
-						backendResponse?.message ||
-						error.description ||
-						'Check the error details above for more information',
-				});
+				throw new NodeOperationError(this.getNode(), errorMessage, { itemIndex: i });
 			}
 		}
 
