@@ -44,7 +44,7 @@ export class TurboDocx implements INodeType {
 		icon: 'file:turbodocx.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{ $parameter["operation"] === "downloadDocument" ? "Download Signed Document" : $parameter["operation"] === "getStatus" ? "Get Document Status" : $parameter["operation"] === "prepareForReview" ? "Prepare Document For Review" : $parameter["operation"] === "prepareForSigning" ? "Prepare Document For Signing" : $parameter["operation"] === "resendEmail" ? "Resend Signature Request Email" : $parameter["operation"] === "voidDocument" ? "Void Signature Document" : "TurboDocx" }}',
+		subtitle: '={{ $parameter["operation"] === "downloadDocument" ? "Download signed document" : $parameter["operation"] === "getStatus" ? "Get document status" : $parameter["operation"] === "prepareForReview" ? "Prepare document for review" : $parameter["operation"] === "prepareForSigning" ? "Prepare document for signing" : $parameter["operation"] === "resendEmail" ? "Resend signature request email" : $parameter["operation"] === "voidDocument" ? "Void signature document" : "TurboDocx" }}',
 		description:
 			'Interact with TurboDocx API for document generation and TurboSign digital signatures',
 		defaults: {
@@ -92,39 +92,39 @@ export class TurboDocx implements INodeType {
 						name: 'TurboSign: Download Document',
 						value: 'downloadDocument',
 						description: 'Download the signed PDF document',
-						action: 'Download Signed Document',
+						action: 'Download signed document',
 					},
 					{
 						name: 'TurboSign: Get Document Status',
 						value: 'getStatus',
 						description: 'Get the current status of a signature document',
-						action: 'Get Document Status',
+						action: 'Get document status',
 					},
 					{
 						name: 'TurboSign: Prepare For Review',
 						value: 'prepareForReview',
 						description:
 							'Upload a document with fields and recipients, get preview URL (no emails sent)',
-						action: 'Prepare Document For Review',
+						action: 'Prepare document for review',
 					},
 					{
 						name: 'TurboSign: Prepare For Signing',
 						value: 'prepareForSigning',
 						description:
 							'Upload a document with fields and recipients, send signature request emails',
-						action: 'Prepare Document For Signing',
+						action: 'Prepare document for signing',
 					},
 					{
 						name: 'TurboSign: Resend Signature Request Email',
 						value: 'resendEmail',
 						description: 'Resend signature request emails to specific recipients',
-						action: 'Resend Signature Request Email',
+						action: 'Resend signature request email',
 					},
 					{
 						name: 'TurboSign: Void Document',
 						value: 'voidDocument',
 						description: 'Cancel a signature request',
-						action: 'Void Signature Document',
+						action: 'Void signature document',
 					},
 				],
 
