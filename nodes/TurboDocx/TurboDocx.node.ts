@@ -453,14 +453,14 @@ export class TurboDocx implements INodeType {
 						);
 
 						// Check for HTTP errors and throw with proper message
-						const fullResponse = response as { statusCode: number; body: any };
+						const fullResponse = response as { statusCode: number; body: unknown };
 						if (fullResponse.statusCode >= 400) {
-							let errorBody = fullResponse.body;
+							let errorBody = fullResponse.body as Record<string, unknown> | string;
 
 							// Parse body if it's a string
 							if (typeof errorBody === 'string') {
 								try {
-									errorBody = JSON.parse(errorBody);
+									errorBody = JSON.parse(errorBody) as Record<string, unknown>;
 								} catch {
 									// Keep as string if not valid JSON
 								}
@@ -469,20 +469,20 @@ export class TurboDocx implements INodeType {
 							// Extract detailed error message from TurboDocx API response format
 							// Format: { message: "...", type: "...", data?: { errors: [...] } }
 							let errorMessage = 'Request failed';
-							const errorCode = errorBody?.type || errorBody?.code || '';
+							const errorCode = typeof errorBody === 'object' ? ((errorBody?.type as string) || (errorBody?.code as string) || '') : '';
 
 							// Check for validation errors with detailed error list
-							if (errorBody?.data?.errors && Array.isArray(errorBody.data.errors)) {
-								const errorDetails = errorBody.data.errors
+							if (typeof errorBody === 'object' && errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+								const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
 									.map((e: { message?: string }) => e.message || JSON.stringify(e))
 									.join('; ');
-								errorMessage = errorDetails || errorBody?.message || 'Validation failed';
-							} else if (errorBody?.error) {
+								errorMessage = errorDetails || (errorBody?.message as string) || 'Validation failed';
+							} else if (typeof errorBody === 'object' && errorBody?.error) {
 								// Some endpoints use { error: "...", code: "..." }
-								errorMessage = errorBody.error;
-							} else if (errorBody?.message) {
+								errorMessage = errorBody.error as string;
+							} else if (typeof errorBody === 'object' && errorBody?.message) {
 								// Standard format { message: "...", type: "..." }
-								errorMessage = errorBody.message;
+								errorMessage = errorBody.message as string;
 							}
 
 							throw new NodeOperationError(
@@ -558,14 +558,14 @@ export class TurboDocx implements INodeType {
 						);
 
 						// Check for HTTP errors and throw with proper message
-						const fullResponse = response as { statusCode: number; body: any };
+						const fullResponse = response as { statusCode: number; body: unknown };
 						if (fullResponse.statusCode >= 400) {
-							let errorBody = fullResponse.body;
+							let errorBody = fullResponse.body as Record<string, unknown> | string;
 
 							// Parse body if it's a string
 							if (typeof errorBody === 'string') {
 								try {
-									errorBody = JSON.parse(errorBody);
+									errorBody = JSON.parse(errorBody) as Record<string, unknown>;
 								} catch {
 									// Keep as string if not valid JSON
 								}
@@ -573,17 +573,17 @@ export class TurboDocx implements INodeType {
 
 							// Extract detailed error message from TurboDocx API response format
 							let errorMessage = 'Request failed';
-							const errorCode = errorBody?.type || errorBody?.code || '';
+							const errorCode = typeof errorBody === 'object' ? ((errorBody?.type as string) || (errorBody?.code as string) || '') : '';
 
-							if (errorBody?.data?.errors && Array.isArray(errorBody.data.errors)) {
-								const errorDetails = errorBody.data.errors
+							if (typeof errorBody === 'object' && errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+								const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
 									.map((e: { message?: string }) => e.message || JSON.stringify(e))
 									.join('; ');
-								errorMessage = errorDetails || errorBody?.message || 'Validation failed';
-							} else if (errorBody?.error) {
-								errorMessage = errorBody.error;
-							} else if (errorBody?.message) {
-								errorMessage = errorBody.message;
+								errorMessage = errorDetails || (errorBody?.message as string) || 'Validation failed';
+							} else if (typeof errorBody === 'object' && errorBody?.error) {
+								errorMessage = errorBody.error as string;
+							} else if (typeof errorBody === 'object' && errorBody?.message) {
+								errorMessage = errorBody.message as string;
 							}
 
 							throw new NodeOperationError(
