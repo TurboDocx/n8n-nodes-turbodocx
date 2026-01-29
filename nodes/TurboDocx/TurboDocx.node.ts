@@ -256,7 +256,6 @@ export class TurboDocx implements INodeType {
 								default: '',
 								placeholder: 'Variable value or JSON object',
 								description: 'The value to replace the placeholder with. For mimeType \'text\', use primitive values (string/number/boolean). For JSON objects with text mimeType, enable Advanced Templating.',
-								required: true,
 							},
 						],
 					},
@@ -604,15 +603,6 @@ export class TurboDocx implements INodeType {
 									throw new NodeOperationError(
 										this.getNode(),
 										`Variable at index ${j} is missing required "mimeType" field`,
-										{ itemIndex: i },
-									);
-								}
-
-								// Check for required value field
-								if (variable.value === undefined) {
-									throw new NodeOperationError(
-										this.getNode(),
-										`Variable at index ${j} is missing required "value" field`,
 										{ itemIndex: i },
 									);
 								}
