@@ -11,7 +11,7 @@
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![Embed TurboDocx in Your App in Minutes](https://img.shields.io/badge/Embed%20TurboDocx%20in%20Your%20App%20in%20Minutes-8A2BE2)](https://www.turbodocx.com/use-cases/embedded-api?utm_source=github&utm_medium=repo&utm_campaign=open_source)
 
-Automate TurboDocx API and TurboSign digital signatures in your n8n workflows. Send signature requests, track document status, and download signed PDFs—all without writing code.
+Automate document generation and digital signatures in your n8n workflows. Generate documents from templates, send signature requests, track document status, and download signed PDFs—all without writing code.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
@@ -19,7 +19,7 @@ Automate TurboDocx API and TurboSign digital signatures in your n8n workflows. S
 
 🚀 **Zero-Code Signature Automation** - Build complete document signing workflows with drag-and-drop simplicity. No API knowledge required.
 
-✍️ **Full TurboSign Integration** - Access all TurboSign capabilities: prepare documents for review, send signature requests, track status, download signed PDFs, void requests, and resend emails.
+✍️ **Complete Integration** - Access all capabilities: generate documents from templates, prepare documents for review, send signature requests, track status, download signed PDFs, void requests, and resend emails.
 
 ⚡ **Lightning Fast** - Pure TypeScript implementation with zero runtime dependencies. Built for n8n Cloud compatibility and instant deployment.
 
@@ -64,16 +64,28 @@ npm install @turbodocx/n8n-nodes-turbodocx
 
 ## Operations
 
-### TurboSign
+The TurboDocx node provides **7 operations** for document generation and digital signatures:
 
 | Operation | What It Does | Use Case |
 |-----------|-------------|----------|
+| **Generate Deliverable** | Generate a document from a template with variables | Create personalized contracts, invoices, reports from templates |
 | **Prepare for Review** | Upload a document with signature fields and get a preview URL. No emails sent. | Preview field placement before sending to clients |
 | **Prepare for Signing** | Upload a document and automatically send signature requests to all recipients | Send employment agreements, contracts, NDAs for signature |
 | **Get Document Status** | Check the current status (draft, pending, completed, voided) | Verify all parties have signed before next step |
-| **Download Document** | Download the final signed PDF | Archive to cloud storage or send to accounting |
-| **Void Document** | Cancel a signature request and invalidate all links | Deal falls through, need to cancel request |
-| **Resend Email** | Resend signature request to recipients who haven't signed | Send reminders after 3 days |
+| **Download Signed Document** | Download the final signed PDF | Archive to cloud storage or send to accounting |
+| **Void Signature Document** | Cancel a signature request and invalidate all links | Deal falls through, need to cancel request |
+| **Resend Signature Request Email** | Resend signature request to recipients who haven't signed | Send reminders after 3 days |
+
+### Document Generation (Generate Deliverable)
+
+**Supported Variable Types:**
+- **Text**: Simple text/number values (`mimeType: "text"`)
+- **JSON**: Nested objects and arrays for advanced templating (`mimeType: "json"`)
+- **HTML**: Rich text content (`mimeType: "html"`)
+- **Markdown**: Markdown-formatted text (`mimeType: "markdown"`)
+- **Image**: Image URLs or base64 data (`mimeType: "image/*"`)
+
+### Digital Signatures (Prepare for Review/Signing)
 
 **Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.)
 
@@ -88,7 +100,7 @@ npm install @turbodocx/n8n-nodes-turbodocx
 **Step-by-step:**
 1. Add a **Webhook** node to receive contract data
 2. Add **HTTP Request** node to download document from your storage (supports PDF, DOCX, PPTX)
-3. Add **TurboDocx** node with operation **TurboSign: Prepare for Signing**
+3. Add **TurboDocx** node with operation **Prepare for Signing**
    - **File**: Select binary data from previous node (or provide URL to hosted file)
    - **Recipients**:
      ```json
@@ -127,17 +139,102 @@ npm install @turbodocx/n8n-nodes-turbodocx
 [Schedule Trigger] → [TurboDocx: Get Status] → [IF: Pending > 3 Days] → [TurboDocx: Resend Email]
 ```
 
+## Document Generation Examples
+
+### Simple Template Generation
+
+```
+[Webhook Trigger] → [TurboDocx: Generate Deliverable] → [Email: Send Document]
+```
+
+**Step-by-step:**
+1. Add a **Webhook** node to receive customer data
+2. Add **TurboDocx** node with operation **Generate Deliverable**
+   - **Template ID**: Your template UUID from TurboDocx dashboard
+   - **Variables Mode**: JSON
+   - **Variables**:
+     ```json
+     [
+       {"name": "customerName", "placeholder": "{customerName}", "mimeType": "text", "value": "{{$json.name}}"},
+       {"name": "date", "placeholder": "{date}", "mimeType": "text", "value": "{{$now}}"},
+       {"name": "amount", "placeholder": "{amount}", "mimeType": "text", "value": "{{$json.amount}}"}
+     ]
+     ```
+3. Add **Email** node to send the generated document
+
+### Advanced Template Generation with Nested Data
+
+**Template placeholders:**
+```
+Customer: {customer.firstName} {customer.lastName}
+Email: {customer.contact.email}
+Order Total: ${order.subtotal + order.tax + order.shipping}
+
+{#order.items}
+- {name}: {quantity} x ${price} = ${quantity * price}
+{/}
+```
+
+**n8n Configuration:**
+1. Add **TurboDocx** node with operation **Generate Deliverable**
+2. Set **Variables Mode** to JSON
+3. Configure **Variables**:
+   ```json
+   [
+     {
+       "name": "customer",
+       "placeholder": "{customer}",
+       "mimeType": "json",
+       "value": {
+         "firstName": "Jane",
+         "lastName": "Smith",
+         "contact": {
+           "email": "jane@example.com"
+         }
+       },
+       "usesAdvancedTemplatingEngine": true
+     },
+     {
+       "name": "order",
+       "placeholder": "{order}",
+       "mimeType": "json",
+       "value": {
+         "subtotal": 100,
+         "tax": 10,
+         "shipping": 15,
+         "items": [
+           {"name": "Product A", "quantity": 2, "price": 30},
+           {"name": "Product B", "quantity": 1, "price": 40}
+         ]
+       },
+       "usesAdvancedTemplatingEngine": true
+     }
+   ]
+   ```
+
+**Key Features:**
+- **Nested property access**: `{customer.contact.email}`
+- **Arithmetic expressions**: `{order.subtotal + order.tax}`
+- **Loops**: `{#order.items}...{/}` iterates over array
+- **Conditionals**: Use `{#condition}...{/}` for conditional content
+
+📚 **Learn More:** [TurboDocx Advanced Templating Documentation](https://docs.turbodocx.com/docs/TurboDocx%20Templating/Advanced%20Templating%20Engine/)
+
 ### Document Generation + Signature Flow
 
 ```
-[Webhook] → [TurboDocx: Generate Document] → [TurboSign: Prepare for Signing] → [Email: Notify Sender]
+[Webhook] → [TurboDocx: Generate Deliverable] → [TurboDocx: Prepare for Signing] → [Email: Notify Sender]
 ```
 
 **Step-by-step:**
 1. **Webhook**: Receive customer data and contract details
-2. **TurboDocx: Generate Document**: Create personalized contract from template
-   - Returns `deliverableId` in output
-3. **TurboSign: Prepare for Signing**:
+2. **TurboDocx: Generate Deliverable**: Create personalized contract from template
+   - **Operation**: Generate Deliverable
+   - **Template ID**: Your template UUID
+   - **Variables**: Configure template variables
+   - Returns `deliverableId` in output: `{{$json.deliverableId}}`
+3. **TurboDocx: Prepare for Signing**:
+   - **Operation**: Prepare for Signing
    - **File Input Method**: Select "Deliverable"
    - **Deliverable ID**: `{{$json.deliverableId}}` (from previous TurboDocx node)
    - **Recipients**:
@@ -150,7 +247,7 @@ npm install @turbodocx/n8n-nodes-turbodocx
    - **Fields**: Use template anchors or coordinates
 4. **Email**: Notify sender that signature request was sent
 
-**Why use this workflow:** Seamlessly generate personalized documents and send them for signature in one automation. The deliverable ID links the generated document directly to the signature request.
+**Why use this workflow:** The deliverableId from document generation flows directly into the signature request, enabling seamless document → signature automation.
 
 ## Field Placement Methods
 
@@ -292,17 +389,17 @@ TurboSign supports **4 different ways** to provide documents for signature reque
 
 **Generate + Sign:**
 ```
-[TurboDocx: Generate] → [TurboSign: Prepare for Signing with Deliverable ID]
+[TurboDocx: Generate Deliverable] → [TurboDocx: Prepare for Signing with Deliverable ID]
 ```
 
 **Download + Sign:**
 ```
-[HTTP Request: Get File] → [TurboSign: Prepare for Signing with Binary Upload]
+[HTTP Request: Get File] → [TurboDocx: Prepare for Signing with Binary Upload]
 ```
 
 **Cloud Storage + Sign:**
 ```
-[TurboSign: Prepare for Signing with File URL from S3/Drive/Dropbox]
+[TurboDocx: Prepare for Signing with File URL from S3/Drive/Dropbox]
 ```
 
 ## Compatibility
@@ -310,6 +407,7 @@ TurboSign supports **4 different ways** to provide documents for signature reque
 - n8n **1.60.0** or later
 - Compatible with **n8n Cloud** (zero runtime dependencies)
 - Works with self-hosted n8n instances
+- **New:** TurboDocx deliverable generation with advanced templating support
 
 ## Resources
 
