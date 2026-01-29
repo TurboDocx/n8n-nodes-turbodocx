@@ -68,53 +68,53 @@ export class TurboDocx implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
-					{
-						name: 'Generate Deliverable',
-						value: 'generateDeliverable',
-						description: 'Generate a document from a template with variables',
-						action: 'Generate deliverable from template',
-					},
-					{
-						name: 'Download Document',
-						value: 'downloadDocument',
-						description: 'Download the signed PDF document',
-						action: 'Download signed document',
-					},
-					{
-						name: 'Get Document Status',
-						value: 'getStatus',
-						description: 'Get the current status of a signature document',
-						action: 'Get document status',
-					},
-					{
-						name: 'Prepare For Review',
-						value: 'prepareForReview',
-						description:
-							'Upload a document with fields and recipients, get preview URL (no emails sent)',
-						action: 'Prepare document for review',
-					},
-					{
-						name: 'Prepare For Signing',
-						value: 'prepareForSigning',
-						description:
-							'Upload a document with fields and recipients, send signature request emails',
-						action: 'Prepare document for signing',
-					},
-					{
-						name: 'Resend Signature Request Email',
-						value: 'resendEmail',
-						description: 'Resend signature request emails to specific recipients',
-						action: 'Resend signature request email',
-					},
-					{
-						name: 'Void Document',
-						value: 'voidDocument',
-						description: 'Cancel a signature request',
-						action: 'Void signature document',
-					},
+				{
+					name: 'Download Document',
+					value: 'downloadDocument',
+					description: 'Download the signed PDF document',
+					action: 'Download signed document',
+				},
+				{
+					name: 'Generate Deliverable',
+					value: 'generateDeliverable',
+					description: 'Generate a document from a template with variables',
+					action: 'Generate deliverable from template',
+				},
+				{
+					name: 'Get Document Status',
+					value: 'getStatus',
+					description: 'Get the current status of a signature document',
+					action: 'Get document status',
+				},
+				{
+					name: 'Prepare For Review',
+					value: 'prepareForReview',
+					description:
+						'Upload a document with fields and recipients, get preview URL (no emails sent)',
+					action: 'Prepare document for review',
+				},
+				{
+					name: 'Prepare For Signing',
+					value: 'prepareForSigning',
+					description:
+						'Upload a document with fields and recipients, send signature request emails',
+					action: 'Prepare document for signing',
+				},
+				{
+					name: 'Resend Signature Request Email',
+					value: 'resendEmail',
+					description: 'Resend signature request emails to specific recipients',
+					action: 'Resend signature request email',
+				},
+				{
+					name: 'Void Document',
+					value: 'voidDocument',
+					description: 'Cancel a signature request',
+					action: 'Void signature document',
+				},
 
-				],
-				default: 'generateDeliverable',
+			],
+			default: 'generateDeliverable',
 			},
 
 			// ===============================
