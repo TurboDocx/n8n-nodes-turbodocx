@@ -44,7 +44,7 @@ export class TurboDocx implements INodeType {
 		icon: 'file:turbodocx.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{ $parameter["operation"] === "generateDeliverable" ? "Generate deliverable from template" : $parameter["operation"] === "downloadDocument" ? "Download signed document" : $parameter["operation"] === "getStatus" ? "Get document status" : $parameter["operation"] === "prepareForReview" ? "Prepare document for review" : $parameter["operation"] === "prepareForSigning" ? "Prepare document for signing" : $parameter["operation"] === "resendEmail" ? "Resend signature request email" : $parameter["operation"] === "voidDocument" ? "Void signature document" : "TurboDocx" }}',
+		subtitle: '={{ $parameter["operation"] === "generateDeliverable" ? "Generate deliverable from template" : $parameter["operation"] === "downloadDeliverableSource" ? "Download deliverable source file" : $parameter["operation"] === "downloadDeliverablePdf" ? "Download deliverable PDF" : $parameter["operation"] === "downloadDocument" ? "Download signed document" : $parameter["operation"] === "getStatus" ? "Get document status" : $parameter["operation"] === "prepareForReview" ? "Prepare document for review" : $parameter["operation"] === "prepareForSigning" ? "Prepare document for signing" : $parameter["operation"] === "resendEmail" ? "Resend signature request email" : $parameter["operation"] === "voidDocument" ? "Void signature document" : "TurboDocx" }}',
 		description:
 			'Interact with TurboDocx API for document generation and TurboSign digital signatures',
 		defaults: {
@@ -68,6 +68,18 @@ export class TurboDocx implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
+				{
+					name: 'Download Deliverable PDF',
+					value: 'downloadDeliverablePdf',
+					description: 'Download the PDF version of a generated deliverable',
+					action: 'Download deliverable PDF',
+				},
+				{
+					name: 'Download Deliverable Source',
+					value: 'downloadDeliverableSource',
+					description: 'Download the source file (DOCX/PPTX) of a generated deliverable',
+					action: 'Download deliverable source file',
+				},
 				{
 					name: 'Download Document',
 					value: 'downloadDocument',
@@ -121,176 +133,35 @@ export class TurboDocx implements INodeType {
 			// TurboDocx: Generate Deliverable - Parameters
 			// ===============================
 			{
-				displayName: 'Template ID',
-				name: 'templateId',
-				type: 'string',
-				required: true,
-				displayOptions: {
-					show: {
-						operation: ['generateDeliverable'],
-					},
-				},
-				default: '',
-				placeholder: 'e.g., 550e8400-e29b-41d4-a716-446655440000',
-				description: 'The UUID of the template to use for generation. Find this in your TurboDocx dashboard.',
-			},
-			{
-				displayName: 'Variables Input Mode',
-				name: 'variablesMode',
-				type: 'options',
-				displayOptions: {
-					show: {
-						operation: ['generateDeliverable'],
-					},
-				},
-				options: [
-					{
-						name: 'JSON',
-						value: 'json',
-						description: 'Provide variables as a JSON array (recommended for complex data)',
-					},
-					{
-						name: 'Define Below',
-						value: 'fields',
-						description: 'Define variables using form fields (easier for simple variables)',
-					},
-				],
-				default: 'json',
-				description: 'How to provide the template variables',
-			},
-			{
-				displayName: 'Variables (JSON)',
-				name: 'variablesJson',
+				displayName: 'Deliverable JSON',
+				name: 'deliverableJson',
 				type: 'json',
 				required: true,
 				displayOptions: {
 					show: {
 						operation: ['generateDeliverable'],
-						variablesMode: ['json'],
 					},
 				},
-				default: '[\n  {\n    "name": "customerName",\n    "placeholder": "{name}",\n    "mimeType": "text",\n    "value": "John Doe"\n  }\n]',
-				placeholder: 'See examples in description',
-				description: 'Array of variable objects. Each variable must have "name" and "placeholder" fields. <a href="https://docs.turbodocx.com/docs/TurboDocx%20Templating/Advanced%20Templating%20Engine/" target="_blank">View Advanced Templating Docs</a>',
-				hint: 'Example: [{"name": "user", "placeholder": "{user}", "mimeType": "json", "value": {"firstName": "Jane", "email": "jane@example.com"}, "usesAdvancedTemplatingEngine": true}]',
+				default: '{\n  "templateId": "your-template-uuid-here",\n  "name": "My Document",\n  "description": "Document generated from template",\n  "variables": [\n    {\n      "name": "user",\n      "placeholder": "{user}",\n      "mimeType": "json",\n      "value": {\n        "firstName": "John",\n        "email": "john@example.com"\n      }\n    }\n  ]\n}',
+				description: 'JSON object containing templateId (required), name (optional), description (optional), and variables array. <a href="https://docs.turbodocx.com/docs/TurboDocx%20Templating/Advanced%20Templating%20Engine/" target="_blank">View Advanced Templating Docs</a>.',
 			},
+
+			// ===============================
+			// Download Deliverable - Parameters
+			// ===============================
 			{
-				displayName: 'Variables',
-				name: 'variablesFields',
-				type: 'fixedCollection',
-				typeOptions: {
-					multipleValues: true,
-				},
+				displayName: 'Deliverable ID',
+				name: 'deliverableIdForDownload',
+				type: 'string',
 				displayOptions: {
 					show: {
-						operation: ['generateDeliverable'],
-						variablesMode: ['fields'],
+						operation: ['downloadDeliverableSource', 'downloadDeliverablePdf'],
 					},
 				},
-				default: {},
-				placeholder: 'Add Variable',
-				options: [
-					{
-						name: 'variable',
-						displayName: 'Variable',
-						values: [
-							{
-								displayName: 'Mime Type',
-								name: 'mimeType',
-								type: 'options',
-								options: [
-									{
-										name: 'HTML',
-										value: 'html',
-									},
-									{
-										name: 'Image',
-										value: 'image/*',
-									},
-									{
-										name: 'JSON (for Nested Objects/arrays)',
-										value: 'json',
-									},
-									{
-										name: 'Markdown',
-										value: 'markdown',
-									},
-									{
-										name: 'Text',
-										value: 'text',
-									},
-								],
-								default: 'text',
-								description: 'The type of data for this variable',
-								required: true,
-							},
-							{
-								displayName: 'Name',
-								name: 'name',
-								type: 'string',
-								default: '',
-								placeholder: 'e.g., customerName',
-								description: 'Variable identifier (required)',
-								required: true,
-							},
-							{
-								displayName: 'Placeholder',
-								name: 'placeholder',
-								type: 'string',
-								default: '',
-								placeholder: 'e.g.,	{name}',
-								description: 'The placeholder in the template (include curly braces, required)',
-								required: true,
-							},
-							{
-								displayName: 'Uses Advanced Templating',
-								name: 'usesAdvancedTemplatingEngine',
-								type: 'boolean',
-								default: false,
-								description: 'Whether to enable advanced templating features (conditionals, loops, arithmetic). Automatically enabled for mimeType \'JSON\'. Required when using JSON values with mimeType \'text\'.',
-							},
-							{
-								displayName: 'Value',
-								name: 'value',
-								type: 'string',
-								default: '',
-								placeholder: 'Variable value or JSON object',
-								description: 'The value to replace the placeholder with. For mimeType \'text\', use primitive values (string/number/boolean). For JSON objects with text mimeType, enable Advanced Templating.',
-							},
-						],
-					},
-				],
-				description: 'Add variables to populate the template. <a href="https://docs.turbodocx.com/docs/TurboDocx%20Templating/Advanced%20Templating%20Engine/" target="_blank">View Advanced Templating Docs</a>.',
-			},
-			{
-				displayName: 'Additional Fields',
-				name: 'additionalFields',
-				type: 'collection',
-				placeholder: 'Add Field',
-				default: {},
-				displayOptions: {
-					show: {
-						operation: ['generateDeliverable'],
-					},
-				},
-				options: [
-					{
-						displayName: 'Name',
-						name: 'name',
-						type: 'string',
-						default: '',
-						description: 'Name for the generated deliverable',
-						placeholder: 'e.g., Contract for Acme Corp',
-					},
-					{
-						displayName: 'Description',
-						name: 'description',
-						type: 'string',
-						default: '',
-						description: 'Description of the deliverable',
-						placeholder: 'e.g., Employment agreement for new hire',
-					},
-				],
+				default: '',
+				description: 'UUID of the deliverable to download',
+				required: true,
+				placeholder: 'e.g., 550e8400-e29b-41d4-a716-446655440000',
 			},
 
 			// ===============================
@@ -541,180 +412,104 @@ export class TurboDocx implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				if (operation === 'generateDeliverable') {
-					// Get required parameters
-					const templateId = this.getNodeParameter('templateId', i) as string;
-					const variablesMode = this.getNodeParameter('variablesMode', i) as string;
+					// Get JSON payload
+					const deliverableJsonString = this.getNodeParameter('deliverableJson', i) as string;
 
-					// Get optional fields
-					const additionalFields = this.getNodeParameter('additionalFields', i, {}) as {
+					// Parse and validate the JSON payload
+					let deliverableData: {
+						templateId: string;
 						name?: string;
 						description?: string;
+						variables?: Array<{
+							name: string;
+							placeholder: string;
+							mimeType: string;
+							value: string | number | boolean | object | unknown[];
+							usesAdvancedTemplatingEngine?: boolean;
+						}>;
 					};
 
-					// Parse and validate variables based on mode
-					let variables: Array<{
-						name: string;
-						placeholder: string;
-						mimeType: string;
-						value: string | number | boolean | object | unknown[];
-						usesAdvancedTemplatingEngine?: boolean;
-					}>;
+					try {
+						deliverableData = JSON.parse(deliverableJsonString);
+					} catch (parseError) {
+						throw new NodeOperationError(
+							this.getNode(),
+							`Invalid JSON in deliverable payload: ${(parseError as Error).message}\n\nHTTP Status: 400`,
+							{ itemIndex: i },
+						);
+					}
 
-					if (variablesMode === 'json') {
-						// JSON mode - parse JSON string
-						const variablesString = this.getNodeParameter('variablesJson', i) as string;
+					// Validate required templateId
+					if (!deliverableData.templateId || typeof deliverableData.templateId !== 'string') {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Missing required "templateId" field in deliverable JSON',
+							{ itemIndex: i },
+						);
+					}
 
-						try {
-							variables = JSON.parse(variablesString);
+					// Validate variables if provided
+					if (deliverableData.variables) {
+						if (!Array.isArray(deliverableData.variables)) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'"variables" must be an array',
+								{ itemIndex: i },
+							);
+						}
 
-							// Validate it's an array
-							if (!Array.isArray(variables)) {
+						// Validate each variable has required fields
+						for (let j = 0; j < deliverableData.variables.length; j++) {
+							const variable = deliverableData.variables[j];
+
+							// Check for required name field
+							if (!variable.name || typeof variable.name !== 'string') {
 								throw new NodeOperationError(
 									this.getNode(),
-									'Variables must be a JSON array',
+									`Variable at index ${j} is missing required "name" field`,
 									{ itemIndex: i },
 								);
 							}
 
-							// Validate each variable has required fields
-							for (let j = 0; j < variables.length; j++) {
-								const variable = variables[j];
+							// Check for required placeholder field
+							if (!variable.placeholder || typeof variable.placeholder !== 'string') {
+								throw new NodeOperationError(
+									this.getNode(),
+									`Variable at index ${j} is missing required "placeholder" field`,
+									{ itemIndex: i },
+								);
+							}
 
-								// Check for required name field
-								if (!variable.name || typeof variable.name !== 'string') {
+							// Check for required mimeType field
+							if (!variable.mimeType || typeof variable.mimeType !== 'string') {
+								throw new NodeOperationError(
+									this.getNode(),
+									`Variable at index ${j} is missing required "mimeType" field`,
+									{ itemIndex: i },
+								);
+							}
+
+							// Validate mimeType "text" constraints
+							if (variable.mimeType === 'text') {
+								const valueType = typeof variable.value;
+								const isPrimitive = valueType === 'string' || valueType === 'number' || valueType === 'boolean';
+
+								// If value is an object/array and usesAdvancedTemplatingEngine is not true, throw error
+								if (!isPrimitive && variable.value !== undefined && !variable.usesAdvancedTemplatingEngine) {
 									throw new NodeOperationError(
 										this.getNode(),
-										`Variable at index ${j} is missing required "name" field`,
+										`Variable at index ${j} ("${variable.name}"): mimeType "text" with JSON object/array value requires "usesAdvancedTemplatingEngine: true"`,
 										{ itemIndex: i },
 									);
-								}
-
-								// Check for required placeholder field
-								if (!variable.placeholder || typeof variable.placeholder !== 'string') {
-									throw new NodeOperationError(
-										this.getNode(),
-										`Variable at index ${j} is missing required "placeholder" field`,
-										{ itemIndex: i },
-									);
-								}
-
-								// Check for required mimeType field
-								if (!variable.mimeType || typeof variable.mimeType !== 'string') {
-									throw new NodeOperationError(
-										this.getNode(),
-										`Variable at index ${j} is missing required "mimeType" field`,
-										{ itemIndex: i },
-									);
-								}
-
-								// Validate mimeType "text" constraints
-								if (variable.mimeType === 'text') {
-									const valueType = typeof variable.value;
-									const isPrimitive = valueType === 'string' || valueType === 'number' || valueType === 'boolean';
-
-									// If value is an object/array and usesAdvancedTemplatingEngine is not true, throw error
-									if (!isPrimitive && !variable.usesAdvancedTemplatingEngine) {
-										throw new NodeOperationError(
-											this.getNode(),
-											`Variable at index ${j} ("${variable.name}"): mimeType "text" with JSON object/array value requires "usesAdvancedTemplatingEngine: true"`,
-											{ itemIndex: i },
-										);
-									}
 								}
 							}
-						} catch (parseError) {
-							throw new NodeOperationError(
-								this.getNode(),
-								`Invalid JSON in variables: ${(parseError as Error).message}\n\nHTTP Status: 400`,
-								{ itemIndex: i },
-							);
-						}
-					} else {
-						// Fields mode - get from fixedCollection
-						const variablesFields = this.getNodeParameter('variablesFields', i, {}) as {
-							variable?: Array<{
-								name: string;
-								placeholder: string;
-								mimeType: string;
-								value: string;
-								usesAdvancedTemplatingEngine?: boolean;
-							}>;
-						};
-
-						if (!variablesFields.variable || !Array.isArray(variablesFields.variable)) {
-							variables = [];
-						} else {
-							variables = variablesFields.variable.map((v, j) => {
-								// Validate required fields
-								if (!v.name || !v.placeholder) {
-									throw new NodeOperationError(
-										this.getNode(),
-										`Variable at position ${j + 1}: Both "name" and "placeholder" are required`,
-										{ itemIndex: i },
-									);
-								}
-
-								// Parse value if mimeType is json
-								let parsedValue: string | number | boolean | object | unknown[] = v.value;
-								if (v.mimeType === 'json') {
-									try {
-										parsedValue = JSON.parse(v.value);
-									} catch (parseError) {
-										throw new NodeOperationError(
-											this.getNode(),
-											`Invalid JSON in variable "${v.name}" (${v.placeholder}) value: ${(parseError as Error).message}`,
-											{ itemIndex: i },
-										);
-									}
-								} else if (v.mimeType === 'text') {
-									// For text mimeType, try to parse the value
-									// If it's a JSON object/array, check for usesAdvancedTemplatingEngine
-									try {
-										const testParse = JSON.parse(v.value);
-										if (typeof testParse === 'object' && testParse !== null) {
-											// Value is a JSON object/array
-											if (!v.usesAdvancedTemplatingEngine) {
-												throw new NodeOperationError(
-													this.getNode(),
-													`Variable "${v.name}" (${v.placeholder}): mimeType "text" with JSON object/array value requires "Uses Advanced Templating" to be enabled`,
-													{ itemIndex: i },
-												);
-											}
-											parsedValue = testParse;
-										} else {
-											// Primitive value parsed from JSON (number, boolean, null)
-											parsedValue = testParse;
-										}
-									} catch {
-										// Not valid JSON, keep as string (which is fine for text mimeType)
-										parsedValue = v.value;
-									}
-								}
-
-								return {
-									name: v.name,
-									placeholder: v.placeholder,
-									mimeType: v.mimeType,
-									value: parsedValue,
-									usesAdvancedTemplatingEngine: v.usesAdvancedTemplatingEngine,
-								};
-							});
-						}
-
-						// Validate we have at least one variable
-						if (variables.length === 0) {
-							throw new NodeOperationError(
-								this.getNode(),
-								'At least one variable is required. Please add variables in the "Variables" section.',
-								{ itemIndex: i },
-							);
 						}
 					}
 
-					// Build request body
+					// Build request body from parsed JSON
 					const requestBody: {
 						templateId: string;
-						variables: Array<{
+						variables?: Array<{
 							name: string;
 							placeholder: string;
 							mimeType: string;
@@ -724,16 +519,18 @@ export class TurboDocx implements INodeType {
 						name?: string;
 						description?: string;
 					} = {
-						templateId,
-						variables,
+						templateId: deliverableData.templateId,
 					};
 
 					// Add optional fields if provided
-					if (additionalFields.name) {
-						requestBody.name = additionalFields.name;
+					if (deliverableData.name) {
+						requestBody.name = deliverableData.name;
 					}
-					if (additionalFields.description) {
-						requestBody.description = additionalFields.description;
+					if (deliverableData.description) {
+						requestBody.description = deliverableData.description;
+					}
+					if (deliverableData.variables) {
+						requestBody.variables = deliverableData.variables;
 					}
 
 					// Make API request
@@ -810,6 +607,173 @@ export class TurboDocx implements INodeType {
 					returnData.push({
 						json: fullResponse.body as IDataObject,
 						pairedItem: { item: i },
+					});
+				}
+
+				// ===============================
+				// Download Deliverable Source File
+				// ===============================
+				else if (operation === 'downloadDeliverableSource') {
+					const deliverableId = this.getNodeParameter('deliverableIdForDownload', i) as string;
+
+					const response = await this.helpers.httpRequestWithAuthentication.call(
+						this,
+						'turboDocxApi',
+						{
+							method: 'GET',
+							url: `${baseUrl}/v1/deliverable/file/${deliverableId}`,
+							encoding: 'arraybuffer',
+							json: false,
+							ignoreHttpStatusErrors: true,
+							returnFullResponse: true,
+						},
+					);
+
+					const fullResponse = response as { statusCode: number; body: unknown; headers: Record<string, string> };
+					if (fullResponse.statusCode >= 400) {
+						let errorBody: string | Record<string, unknown> = fullResponse.body as string | Record<string, unknown>;
+
+						// Try to parse error body if it's a buffer/string
+						if (Buffer.isBuffer(errorBody)) {
+							errorBody = errorBody.toString('utf-8');
+						}
+						if (typeof errorBody === 'string') {
+							try {
+								errorBody = JSON.parse(errorBody) as Record<string, unknown>;
+							} catch {
+								// Keep as string
+							}
+						}
+
+						// Extract detailed error message
+						let errorMessage = 'Request failed';
+						const errorCode = typeof errorBody === 'object' ? ((errorBody?.type as string) || (errorBody?.code as string) || '') : '';
+
+						if (typeof errorBody === 'object' && errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+							const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
+								.map((e: { message?: string }) => e.message || JSON.stringify(e))
+								.join('; ');
+							errorMessage = errorDetails || (errorBody?.message as string) || 'Download failed';
+						} else if (typeof errorBody === 'object' && errorBody?.error) {
+							errorMessage = errorBody.error as string;
+						} else if (typeof errorBody === 'object' && errorBody?.message) {
+							errorMessage = errorBody.message as string;
+						}
+
+						throw new NodeOperationError(
+							this.getNode(),
+							`${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${fullResponse.statusCode}`,
+							{ itemIndex: i },
+						);
+					}
+
+					// Extract filename from Content-Disposition header if available
+					let filename = `deliverable-${deliverableId}`;
+					const contentDisposition = fullResponse.headers['content-disposition'];
+					if (contentDisposition) {
+						const filenameMatch = contentDisposition.match(/filename="(.+?)"/);
+						if (filenameMatch) {
+							filename = filenameMatch[1];
+						}
+					}
+
+					// Get mime type from Content-Type header
+					const mimeType = fullResponse.headers['content-type'] || 'application/octet-stream';
+
+					// Success - extract buffer from response body
+					const binaryData = await this.helpers.prepareBinaryData(
+						fullResponse.body as Buffer,
+						filename,
+						mimeType,
+					);
+
+					returnData.push({
+						json: { deliverableId, filename, mimeType },
+						binary: {
+							data: binaryData,
+						},
+					});
+				}
+
+				// ===============================
+				// Download Deliverable PDF
+				// ===============================
+				else if (operation === 'downloadDeliverablePdf') {
+					const deliverableId = this.getNodeParameter('deliverableIdForDownload', i) as string;
+
+					const response = await this.helpers.httpRequestWithAuthentication.call(
+						this,
+						'turboDocxApi',
+						{
+							method: 'GET',
+							url: `${baseUrl}/v1/deliverable/file/pdf/${deliverableId}`,
+							encoding: 'arraybuffer',
+							json: false,
+							ignoreHttpStatusErrors: true,
+							returnFullResponse: true,
+						},
+					);
+
+					const fullResponse = response as { statusCode: number; body: unknown; headers: Record<string, string> };
+					if (fullResponse.statusCode >= 400) {
+						let errorBody: string | Record<string, unknown> = fullResponse.body as string | Record<string, unknown>;
+
+						// Try to parse error body if it's a buffer/string
+						if (Buffer.isBuffer(errorBody)) {
+							errorBody = errorBody.toString('utf-8');
+						}
+						if (typeof errorBody === 'string') {
+							try {
+								errorBody = JSON.parse(errorBody) as Record<string, unknown>;
+							} catch {
+								// Keep as string
+							}
+						}
+
+						// Extract detailed error message
+						let errorMessage = 'Request failed';
+						const errorCode = typeof errorBody === 'object' ? ((errorBody?.type as string) || (errorBody?.code as string) || '') : '';
+
+						if (typeof errorBody === 'object' && errorBody?.data && typeof errorBody.data === 'object' && Array.isArray((errorBody.data as { errors?: unknown[] }).errors)) {
+							const errorDetails = ((errorBody.data as { errors: { message?: string }[] }).errors)
+								.map((e: { message?: string }) => e.message || JSON.stringify(e))
+								.join('; ');
+							errorMessage = errorDetails || (errorBody?.message as string) || 'Download failed';
+						} else if (typeof errorBody === 'object' && errorBody?.error) {
+							errorMessage = errorBody.error as string;
+						} else if (typeof errorBody === 'object' && errorBody?.message) {
+							errorMessage = errorBody.message as string;
+						}
+
+						throw new NodeOperationError(
+							this.getNode(),
+							`${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${fullResponse.statusCode}`,
+							{ itemIndex: i },
+						);
+					}
+
+					// Extract filename from Content-Disposition header if available
+					let filename = `deliverable-${deliverableId}.pdf`;
+					const contentDisposition = fullResponse.headers['content-disposition'];
+					if (contentDisposition) {
+						const filenameMatch = contentDisposition.match(/filename="(.+?)"/);
+						if (filenameMatch) {
+							filename = filenameMatch[1];
+						}
+					}
+
+					// Success - extract buffer from response body
+					const binaryData = await this.helpers.prepareBinaryData(
+						fullResponse.body as Buffer,
+						filename,
+						'application/pdf',
+					);
+
+					returnData.push({
+						json: { deliverableId, filename },
+						binary: {
+							data: binaryData,
+						},
 					});
 				}
 				else if (operation === 'prepareForReview') {
