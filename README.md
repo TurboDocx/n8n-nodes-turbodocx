@@ -64,11 +64,13 @@ npm install @turbodocx/n8n-nodes-turbodocx
 
 ## Operations
 
-The TurboDocx node provides **7 operations** for document generation and digital signatures:
+The TurboDocx node provides **9 operations** for document generation and digital signatures:
 
 | Operation | What It Does | Use Case |
 |-----------|-------------|----------|
 | **Generate Deliverable** | Generate a document from a template with variables | Create personalized contracts, invoices, reports from templates |
+| **Download Deliverable PDF** | Download the PDF version of a generated deliverable | Archive generated documents or send to clients |
+| **Download Deliverable Source** | Download the source file (DOCX/PPTX) of a generated deliverable | Get editable version for further modifications |
 | **Prepare for Review** | Upload a document with signature fields and get a preview URL. No emails sent. | Preview field placement before sending to clients |
 | **Prepare for Signing** | Upload a document and automatically send signature requests to all recipients | Send employment agreements, contracts, NDAs for signature |
 | **Get Document Status** | Check the current status (draft, pending, completed, voided) | Verify all parties have signed before next step |
@@ -94,7 +96,7 @@ The TurboDocx node provides **7 operations** for document generation and digital
 ### Simple Contract Signing Workflow
 
 ```
-[Webhook Trigger] → [HTTP Request: Get Document] → [TurboDocx: Prepare for Signing] → [Slack: Notify Team]
+[Webhook Trigger] → [HTTP Request: Get Document] → [TurboDocx Node: Prepare for Signing] → [Slack: Notify Team]
 ```
 
 **Step-by-step:**
@@ -144,21 +146,24 @@ The TurboDocx node provides **7 operations** for document generation and digital
 ### Simple Template Generation
 
 ```
-[Webhook Trigger] → [TurboDocx: Generate Deliverable] → [Email: Send Document]
+[Webhook Trigger] → [TurboDocx Node: Generate Deliverable] → [Email: Send Document]
 ```
 
 **Step-by-step:**
 1. Add a **Webhook** node to receive customer data
 2. Add **TurboDocx** node with operation **Generate Deliverable**
-   - **Template ID**: Your template UUID from TurboDocx dashboard
-   - **Variables Mode**: JSON
-   - **Variables**:
+   - **Deliverable JSON**:
      ```json
-     [
-       {"name": "customerName", "placeholder": "{customerName}", "mimeType": "text", "value": "{{$json.name}}"},
-       {"name": "date", "placeholder": "{date}", "mimeType": "text", "value": "{{$now}}"},
-       {"name": "amount", "placeholder": "{amount}", "mimeType": "text", "value": "{{$json.amount}}"}
-     ]
+     {
+       "templateId": "your-template-uuid-here",
+       "name": "Invoice for {{$json.name}}",
+       "description": "Auto-generated invoice",
+       "variables": [
+         {"name": "customerName", "placeholder": "{customerName}", "mimeType": "text", "value": "{{$json.name}}"},
+         {"name": "date", "placeholder": "{date}", "mimeType": "text", "value": "{{$now}}"},
+         {"name": "amount", "placeholder": "{amount}", "mimeType": "text", "value": "{{$json.amount}}"}
+       ]
+     }
      ```
 3. Add **Email** node to send the generated document
 
@@ -177,39 +182,43 @@ Order Total: ${order.subtotal + order.tax + order.shipping}
 
 **n8n Configuration:**
 1. Add **TurboDocx** node with operation **Generate Deliverable**
-2. Set **Variables Mode** to JSON
-3. Configure **Variables**:
+2. Configure **Deliverable JSON**:
    ```json
-   [
-     {
-       "name": "customer",
-       "placeholder": "{customer}",
-       "mimeType": "json",
-       "value": {
-         "firstName": "Jane",
-         "lastName": "Smith",
-         "contact": {
-           "email": "jane@example.com"
-         }
+   {
+     "templateId": "your-template-uuid-here",
+     "name": "Order Confirmation",
+     "description": "Order confirmation with itemized list",
+     "variables": [
+       {
+         "name": "customer",
+         "placeholder": "{customer}",
+         "mimeType": "json",
+         "value": {
+           "firstName": "Jane",
+           "lastName": "Smith",
+           "contact": {
+             "email": "jane@example.com"
+           }
+         },
+         "usesAdvancedTemplatingEngine": true
        },
-       "usesAdvancedTemplatingEngine": true
-     },
-     {
-       "name": "order",
-       "placeholder": "{order}",
-       "mimeType": "json",
-       "value": {
-         "subtotal": 100,
-         "tax": 10,
-         "shipping": 15,
-         "items": [
-           {"name": "Product A", "quantity": 2, "price": 30},
-           {"name": "Product B", "quantity": 1, "price": 40}
-         ]
-       },
-       "usesAdvancedTemplatingEngine": true
-     }
-   ]
+       {
+         "name": "order",
+         "placeholder": "{order}",
+         "mimeType": "json",
+         "value": {
+           "subtotal": 100,
+           "tax": 10,
+           "shipping": 15,
+           "items": [
+             {"name": "Product A", "quantity": 2, "price": 30},
+             {"name": "Product B", "quantity": 1, "price": 40}
+           ]
+         },
+         "usesAdvancedTemplatingEngine": true
+       }
+     ]
+   }
    ```
 
 **Key Features:**
@@ -220,18 +229,58 @@ Order Total: ${order.subtotal + order.tax + order.shipping}
 
 📚 **Learn More:** [TurboDocx Advanced Templating Documentation](https://docs.turbodocx.com/docs/TurboDocx%20Templating/Advanced%20Templating%20Engine/)
 
+### Download Generated Deliverables
+
+After generating a document, you can download it in two formats:
+
+**Download PDF Version:**
+```
+[TurboDocx: Generate Deliverable] → [TurboDocx: Download Deliverable PDF] → [Google Drive: Upload]
+```
+
+**Step-by-step:**
+1. **TurboDocx: Generate Deliverable** - Create document from template
+   - Returns `deliverableId` in output
+2. **TurboDocx: Download Deliverable PDF** - Download PDF version
+   - **Deliverable ID**: `{{$json.deliverableId}}` (from previous node)
+   - Returns binary PDF file
+3. **Google Drive: Upload** - Save to cloud storage
+
+**Download Source File (DOCX/PPTX):**
+```
+[TurboDocx: Generate Deliverable] → [TurboDocx: Download Deliverable Source] → [Email: Send Attachment]
+```
+
+**Step-by-step:**
+1. **TurboDocx: Generate Deliverable** - Create document from template
+   - Returns `deliverableId` in output
+2. **TurboDocx: Download Deliverable Source** - Download source file
+   - **Deliverable ID**: `{{$json.deliverableId}}` (from previous node)
+   - Returns binary file (DOCX or PPTX depending on template)
+3. **Email: Send Attachment** - Email the editable document
+
+**Use Cases:**
+- **PDF Download**: Archive final documents, send to clients, upload to storage
+- **Source Download**: Provide editable versions, enable client modifications, create backups
+
 ### Document Generation + Signature Flow
 
 ```
-[Webhook] → [TurboDocx: Generate Deliverable] → [TurboDocx: Prepare for Signing] → [Email: Notify Sender]
+[Webhook] → [TurboDocx Node: Generate Deliverable] → [TurboDocx Node: Prepare for Signing] → [Email: Notify Sender]
 ```
 
 **Step-by-step:**
 1. **Webhook**: Receive customer data and contract details
 2. **TurboDocx: Generate Deliverable**: Create personalized contract from template
    - **Operation**: Generate Deliverable
-   - **Template ID**: Your template UUID
-   - **Variables**: Configure template variables
+   - **Deliverable JSON**:
+     ```json
+     {
+       "templateId": "your-template-uuid-here",
+       "name": "Contract for {{$json.customerName}}",
+       "variables": [...]
+     }
+     ```
    - Returns `deliverableId` in output: `{{$json.deliverableId}}`
 3. **TurboDocx: Prepare for Signing**:
    - **Operation**: Prepare for Signing
@@ -389,17 +438,17 @@ TurboSign supports **4 different ways** to provide documents for signature reque
 
 **Generate + Sign:**
 ```
-[TurboDocx: Generate Deliverable] → [TurboDocx: Prepare for Signing with Deliverable ID]
+[TurboDocx Node: Generate Deliverable] → [TurboDocx Node: Prepare for Signing with Deliverable ID]
 ```
 
 **Download + Sign:**
 ```
-[HTTP Request: Get File] → [TurboDocx: Prepare for Signing with Binary Upload]
+[HTTP Request: Get File] → [TurboDocx Node: Prepare for Signing with Binary Upload]
 ```
 
 **Cloud Storage + Sign:**
 ```
-[TurboDocx: Prepare for Signing with File URL from S3/Drive/Dropbox]
+[TurboDocx Node: Prepare for Signing with File URL from S3/Drive/Dropbox]
 ```
 
 ## Compatibility
