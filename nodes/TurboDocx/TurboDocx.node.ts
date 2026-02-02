@@ -539,7 +539,7 @@ export class TurboDocx implements INodeType {
 						'turboDocxApi',
 						{
 							method: 'POST',
-							url: `${baseUrl}/v1/deliverables`,
+							url: `${baseUrl}/v1/deliverable`,
 							body: requestBody,
 							json: true,
 							ignoreHttpStatusErrors: true,
