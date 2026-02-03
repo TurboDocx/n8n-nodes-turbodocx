@@ -60,73 +60,118 @@ export class TurboDocx implements INodeType {
 		],
 		properties: [
 			// ===============================
-			// Operations
+			// Resource Selector
+			// ===============================
+			{
+				displayName: 'Resource',
+				name: 'resource',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'TurboDocx',
+						value: 'turboDocx',
+						description: 'Document generation from templates',
+					},
+					{
+						name: 'TurboSign',
+						value: 'turboSign',
+						description: 'Digital signature workflows',
+					},
+				],
+				default: 'turboSign',
+			},
+
+			// ===============================
+			// TurboDocx Operations
 			// ===============================
 			{
 				displayName: 'Operation',
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['turboDocx'],
+					},
+				},
 				options: [
-				{
-					name: 'Download Deliverable PDF',
-					value: 'downloadDeliverablePdf',
-					description: 'Download the PDF version of a generated deliverable',
-					action: 'Download deliverable PDF',
-				},
-				{
-					name: 'Download Deliverable Source',
-					value: 'downloadDeliverableSource',
-					description: 'Download the source file (DOCX/PPTX) of a generated deliverable',
-					action: 'Download deliverable source file',
-				},
-				{
-					name: 'Download Document',
-					value: 'downloadDocument',
-					description: 'Download the signed PDF document',
-					action: 'Download signed document',
-				},
-				{
-					name: 'Generate Deliverable',
-					value: 'generateDeliverable',
-					description: 'Generate a document from a template with variables',
-					action: 'Generate deliverable from template',
-				},
-				{
-					name: 'Get Document Status',
-					value: 'getStatus',
-					description: 'Get the current status of a signature document',
-					action: 'Get document status',
-				},
-				{
-					name: 'Prepare For Review',
-					value: 'prepareForReview',
-					description:
-						'Upload a document with fields and recipients, get preview URL (no emails sent)',
-					action: 'Prepare document for review',
-				},
-				{
-					name: 'Prepare For Signing',
-					value: 'prepareForSigning',
-					description:
-						'Upload a document with fields and recipients, send signature request emails',
-					action: 'Prepare document for signing',
-				},
-				{
-					name: 'Resend Signature Request Email',
-					value: 'resendEmail',
-					description: 'Resend signature request emails to specific recipients',
-					action: 'Resend signature request email',
-				},
-				{
-					name: 'Void Document',
-					value: 'voidDocument',
-					description: 'Cancel a signature request',
-					action: 'Void signature document',
-				},
+					{
+						name: 'Generate Deliverable',
+						value: 'generateDeliverable',
+						description: 'Generate a document from a template with variables',
+						action: 'Generate deliverable from template',
+					},
+					{
+						name: 'Download Deliverable PDF',
+						value: 'downloadDeliverablePdf',
+						description: 'Download the PDF version of a generated deliverable',
+						action: 'Download deliverable PDF',
+					},
+					{
+						name: 'Download Deliverable Source',
+						value: 'downloadDeliverableSource',
+						description: 'Download the source file (DOCX/PPTX) of a generated deliverable',
+						action: 'Download deliverable source file',
+					},
+				],
+				default: 'generateDeliverable',
+			},
 
-			],
-			default: 'generateDeliverable',
+			// ===============================
+			// TurboSign Operations
+			// ===============================
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['turboSign'],
+					},
+				},
+				options: [
+					{
+						name: 'Prepare For Signing',
+						value: 'prepareForSigning',
+						description:
+							'Upload a document with fields and recipients, send signature request emails',
+						action: 'Prepare document for signing',
+					},
+					{
+						name: 'Prepare For Review',
+						value: 'prepareForReview',
+						description:
+							'Upload a document with fields and recipients, get preview URL (no emails sent)',
+						action: 'Prepare document for review',
+					},
+					{
+						name: 'Get Document Status',
+						value: 'getStatus',
+						description: 'Get the current status of a signature document',
+						action: 'Get document status',
+					},
+					{
+						name: 'Download Document',
+						value: 'downloadDocument',
+						description: 'Download the signed PDF document',
+						action: 'Download signed document',
+					},
+					{
+						name: 'Void Document',
+						value: 'voidDocument',
+						description: 'Cancel a signature request',
+						action: 'Void signature document',
+					},
+					{
+						name: 'Resend Signature Request Email',
+						value: 'resendEmail',
+						description: 'Resend signature request emails to specific recipients',
+						action: 'Resend signature request email',
+					},
+				],
+				default: 'prepareForSigning',
 			},
 
 			// ===============================
@@ -139,6 +184,7 @@ export class TurboDocx implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['turboDocx'],
 						operation: ['generateDeliverable'],
 					},
 				},
@@ -155,6 +201,7 @@ export class TurboDocx implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
+						resource: ['turboDocx'],
 						operation: ['downloadDeliverableSource', 'downloadDeliverablePdf'],
 					},
 				},
@@ -165,7 +212,6 @@ export class TurboDocx implements INodeType {
 			},
 
 			// ===============================
-			// ===============================
 			// Prepare for Review / Prepare for Signing - Common Fields
 			// ===============================
 			{
@@ -174,6 +220,7 @@ export class TurboDocx implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['prepareForReview', 'prepareForSigning'],
 					},
 				},
@@ -209,6 +256,7 @@ export class TurboDocx implements INodeType {
 				requiresDataPath: 'single',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['prepareForReview', 'prepareForSigning'],
 						fileInputMethod: ['upload'],
 					},
@@ -225,6 +273,7 @@ export class TurboDocx implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['prepareForReview', 'prepareForSigning'],
 						fileInputMethod: ['url'],
 					},
@@ -239,6 +288,7 @@ export class TurboDocx implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['prepareForReview', 'prepareForSigning'],
 						fileInputMethod: ['deliverable'],
 					},
@@ -253,6 +303,7 @@ export class TurboDocx implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['prepareForReview', 'prepareForSigning'],
 						fileInputMethod: ['template'],
 					},
@@ -267,6 +318,7 @@ export class TurboDocx implements INodeType {
 				type: 'json',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['prepareForReview', 'prepareForSigning'],
 					},
 				},
@@ -284,6 +336,7 @@ export class TurboDocx implements INodeType {
 				type: 'json',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['prepareForReview', 'prepareForSigning'],
 					},
 				},
@@ -303,6 +356,7 @@ export class TurboDocx implements INodeType {
 				default: {},
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['prepareForReview', 'prepareForSigning'],
 					},
 				},
@@ -355,6 +409,7 @@ export class TurboDocx implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['getStatus', 'downloadDocument', 'voidDocument', 'resendEmail'],
 					},
 				},
@@ -372,6 +427,7 @@ export class TurboDocx implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['voidDocument'],
 					},
 				},
@@ -389,6 +445,7 @@ export class TurboDocx implements INodeType {
 				type: 'json',
 				displayOptions: {
 					show: {
+						resource: ['turboSign'],
 						operation: ['resendEmail'],
 					},
 				},
