@@ -91,25 +91,29 @@ const resourceSelector: INodeProperties = {
 	name: 'resource',
 	type: 'options',
 	noDataExpression: true,
+	// Labels are prefixed with the product sub-brand so the dropdown visually
+	// groups by TurboDocx / TurboPartner / TurboQuote / TurboSign (n8n sorts
+	// options alphabetically). Only the labels carry the brand — the `value`s are
+	// unchanged, so existing workflows keep working.
 	options: [
-		{ name: 'Bundle', value: 'bundle' },
-		{ name: 'Company', value: 'company' },
-		{ name: 'Contact', value: 'contact' },
-		{ name: 'Deliverable', value: 'deliverable' },
-		{ name: 'Partner API Key', value: 'partnerApiKey' },
-		{ name: 'Partner Audit Log', value: 'partnerAuditLog' },
-		{ name: 'Partner Org API Key', value: 'partnerOrgApiKey' },
-		{ name: 'Partner Org User', value: 'partnerOrgUser' },
-		{ name: 'Partner Organization', value: 'partnerOrganization' },
-		{ name: 'Partner User', value: 'partnerUser' },
-		{ name: 'Price Book', value: 'priceBook' },
-		{ name: 'Product', value: 'product' },
-		{ name: 'Quote', value: 'quote' },
-		{ name: 'Quote Line Item', value: 'quoteLineItem' },
-		{ name: 'Quote Template', value: 'quoteTemplate' },
-		{ name: 'Quote Type', value: 'quoteType' },
+		{ name: 'TurboDocx: Deliverable', value: 'deliverable' },
+		{ name: 'TurboDocx: Webhook', value: 'webhook' },
+		{ name: 'TurboPartner: API Key', value: 'partnerApiKey' },
+		{ name: 'TurboPartner: Audit Log', value: 'partnerAuditLog' },
+		{ name: 'TurboPartner: Org API Key', value: 'partnerOrgApiKey' },
+		{ name: 'TurboPartner: Org User', value: 'partnerOrgUser' },
+		{ name: 'TurboPartner: Organization', value: 'partnerOrganization' },
+		{ name: 'TurboPartner: User', value: 'partnerUser' },
+		{ name: 'TurboQuote: Bundle', value: 'bundle' },
+		{ name: 'TurboQuote: Company', value: 'company' },
+		{ name: 'TurboQuote: Contact', value: 'contact' },
+		{ name: 'TurboQuote: Price Book', value: 'priceBook' },
+		{ name: 'TurboQuote: Product', value: 'product' },
+		{ name: 'TurboQuote: Quote', value: 'quote' },
+		{ name: 'TurboQuote: Quote Line Item', value: 'quoteLineItem' },
+		{ name: 'TurboQuote: Quote Template', value: 'quoteTemplate' },
+		{ name: 'TurboQuote: Quote Type', value: 'quoteType' },
 		{ name: 'TurboSign', value: 'turboSign' },
-		{ name: 'Webhook', value: 'webhook' },
 	],
 	default: 'turboSign',
 };
@@ -121,7 +125,7 @@ export class TurboDocx implements INodeType {
 		icon: 'file:turbodocx.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{ $parameter["operation"] === "downloadDocument" ? "Download signed document" : $parameter["operation"] === "getStatus" ? "Get document status" : $parameter["operation"] === "getAuditTrail" ? "Get document audit trail" : $parameter["operation"] === "prepareForReview" ? "Prepare document for review" : $parameter["operation"] === "prepareForSigning" ? "Prepare document for signing" : $parameter["operation"] === "resendEmail" ? "Resend signature request email" : $parameter["operation"] === "voidDocument" ? "Void signature document" : $parameter["resource"] + ": " + $parameter["operation"] }}',
+		subtitle: '={{ $parameter["operation"] === "downloadDocument" ? "Download document" : $parameter["operation"] === "getStatus" ? "Get status" : $parameter["operation"] === "getAuditTrail" ? "Get audit trail" : $parameter["operation"] === "prepareForReview" ? "Get review link" : $parameter["operation"] === "prepareForSigning" ? "Send signature" : $parameter["operation"] === "resendEmail" ? "Resend email" : $parameter["operation"] === "voidDocument" ? "Void" : $parameter["resource"] + ": " + $parameter["operation"] }}',
 		description:
 			'Interact with TurboDocx for document generation, e-signatures (TurboSign), quotes (TurboQuote), partner management, and webhooks',
 		defaults: {
@@ -247,7 +251,11 @@ export class TurboDocx implements INodeType {
 					});
 				}
 
-				returnData.push(...result);
+				// Stamp item linkage so downstream nodes can resolve paired-item
+				// expressions, including 1→N fan-out outputs (list/getAll).
+				returnData.push(
+					...result.map((r) => ({ ...r, pairedItem: r.pairedItem ?? { item: i } })),
+				);
 			} catch (error) {
 				// Re-throw NodeOperationError as-is (already formatted)
 				if (error instanceof NodeOperationError) {

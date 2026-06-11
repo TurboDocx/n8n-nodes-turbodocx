@@ -1,13 +1,11 @@
-import { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
+import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError } from 'n8n-workflow';
 import {
 	turboDocxApiRequest,
 	turboDocxApiRequestBinary,
 	parseJsonParameter,
 	detectBinaryType,
+	paginatedList,
 } from '../../shared/GenericFunctions';
-
-/** Page size used when "Return All" is enabled. */
-const PAGE_SIZE = 100;
 
 export async function executeDeliverable(
 	ctx: IExecuteFunctions,
@@ -36,7 +34,11 @@ export async function executeDeliverable(
 			{ method: 'POST', endpoint: '/v1/deliverable', body, unwrap: 'smart' },
 			i,
 		);
-		return [{ json: result }];
+		// Backend returns { results: { deliverable: <record> } } after smart-unwrap;
+		// peel both wrappers so the item matches the flat shape of `get`.
+		const inner = (result.results as IDataObject) ?? result;
+		const record = (inner.deliverable as IDataObject) ?? inner;
+		return [{ json: record }];
 	}
 
 	if (operation === 'get') {
@@ -56,46 +58,13 @@ export async function executeDeliverable(
 	}
 
 	if (operation === 'list') {
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
 		if (filters.showTags !== undefined) baseQs.showTags = filters.showTags;
 
-		const out: INodeExecutionData[] = [];
-
-		if (returnAll) {
-			let offset = 0;
-			let total = Infinity;
-			while (offset < total) {
-				const page = await turboDocxApiRequest(
-					ctx,
-					{
-						method: 'GET',
-						endpoint: '/v1/deliverable',
-						qs: { ...baseQs, limit: PAGE_SIZE, offset },
-						unwrap: 'smart',
-					},
-					i,
-				);
-				const results = (page.results as IDataObject[]) ?? [];
-				total = (page.totalRecords as number) ?? results.length;
-				for (const r of results) out.push({ json: r });
-				if (results.length === 0) break;
-				offset += results.length;
-			}
-		} else {
-			const limit = ctx.getNodeParameter('limit', i, 50) as number;
-			const page = await turboDocxApiRequest(
-				ctx,
-				{ method: 'GET', endpoint: '/v1/deliverable', qs: { ...baseQs, limit, offset: 0 }, unwrap: 'smart' },
-				i,
-			);
-			const results = (page.results as IDataObject[]) ?? [];
-			for (const r of results) out.push({ json: r });
-		}
-
-		return out;
+		const records = await paginatedList(ctx, { endpoint: '/v1/deliverable', i, baseQs });
+		return records.map((r) => ({ json: r }));
 	}
 
 	if (operation === 'update') {
@@ -151,5 +120,5 @@ export async function executeDeliverable(
 		];
 	}
 
-	throw new Error(`Unknown Deliverable operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Deliverable operation: ${operation}`, { itemIndex: i });
 }

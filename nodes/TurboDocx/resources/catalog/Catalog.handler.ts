@@ -1,12 +1,10 @@
-import { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
+import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError } from 'n8n-workflow';
 import {
 	turboDocxApiRequest,
 	parseJsonParameter,
 	detectBinaryType,
+	paginatedList,
 } from '../../shared/GenericFunctions';
-
-/** Page size used when "Return All" is enabled. */
-const PAGE_SIZE = 100;
 
 /** A single file part for an n8n multipart upload. */
 interface IFilePart {
@@ -57,36 +55,8 @@ async function paginateList(
 	endpoint: string,
 	baseQs: IDataObject,
 ): Promise<INodeExecutionData[]> {
-	const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
-	const out: INodeExecutionData[] = [];
-
-	if (returnAll) {
-		let offset = 0;
-		let total = Infinity;
-		while (offset < total) {
-			const page = await turboDocxApiRequest(
-				ctx,
-				{ method: 'GET', endpoint, qs: { ...baseQs, limit: PAGE_SIZE, offset }, unwrap: 'smart' },
-				i,
-			);
-			const results = (page.results as IDataObject[]) ?? [];
-			total = (page.totalRecords as number) ?? results.length;
-			for (const r of results) out.push({ json: r });
-			if (results.length === 0) break;
-			offset += results.length;
-		}
-	} else {
-		const limit = ctx.getNodeParameter('limit', i, 50) as number;
-		const page = await turboDocxApiRequest(
-			ctx,
-			{ method: 'GET', endpoint, qs: { ...baseQs, limit, offset: 0 }, unwrap: 'smart' },
-			i,
-		);
-		const results = (page.results as IDataObject[]) ?? [];
-		for (const r of results) out.push({ json: r });
-	}
-
-	return out;
+	const records = await paginatedList(ctx, { endpoint, i, baseQs });
+	return records.map((r) => ({ json: r }));
 }
 
 // =====================================================================================
@@ -279,7 +249,7 @@ async function executeProduct(
 		return [{ json: map }];
 	}
 
-	throw new Error(`Unknown Product operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Product operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================================
@@ -422,7 +392,7 @@ async function executePriceBook(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Price Book operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Price Book operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================================
@@ -550,7 +520,7 @@ async function executeBundle(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Bundle operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Bundle operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================================
@@ -566,5 +536,5 @@ export async function executeCatalog(
 	if (resource === 'product') return executeProduct(ctx, operation, i);
 	if (resource === 'priceBook') return executePriceBook(ctx, operation, i);
 	if (resource === 'bundle') return executeBundle(ctx, operation, i);
-	throw new Error(`Unknown Catalog resource: ${resource}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Catalog resource: ${resource}`, { itemIndex: i });
 }

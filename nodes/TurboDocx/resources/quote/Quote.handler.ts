@@ -1,12 +1,10 @@
-import { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
+import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError } from 'n8n-workflow';
 import {
 	turboDocxApiRequest,
 	turboDocxApiRequestBinary,
 	parseJsonParameter,
+	paginatedList,
 } from '../../shared/GenericFunctions';
-
-/** Page size used when "Return All" is enabled. */
-const PAGE_SIZE = 100;
 
 /** Split a comma/space separated email string into a trimmed array. */
 function parseCcEmails(raw: string): string[] {
@@ -34,7 +32,10 @@ async function executeQuoteResource(
 		const body: IDataObject = { name, companyId, contactId };
 		if (additionalFields.currency) body.currency = additionalFields.currency;
 		if (additionalFields.termDays !== undefined) body.termDays = additionalFields.termDays;
-		if (additionalFields.renewalPeriod) body.renewalPeriod = additionalFields.renewalPeriod;
+		// renewalPeriod is only accepted for auto-renewal terms (termDays === -1);
+		// sending it alongside any other termDays makes the backend reject the request.
+		if (additionalFields.termDays === -1 && additionalFields.renewalPeriod)
+			body.renewalPeriod = additionalFields.renewalPeriod;
 		if (additionalFields.validUntil) body.validUntil = additionalFields.validUntil;
 		if (additionalFields.taxRate !== undefined) body.taxRate = additionalFields.taxRate;
 		if (additionalFields.priceBookId) body.priceBookId = additionalFields.priceBookId;
@@ -58,7 +59,6 @@ async function executeQuoteResource(
 	}
 
 	if (operation === 'list') {
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
@@ -69,40 +69,8 @@ async function executeQuoteResource(
 			baseQs.statuses = filters.statuses;
 		}
 
-		const out: INodeExecutionData[] = [];
-
-		if (returnAll) {
-			let offset = 0;
-			let total = Infinity;
-			while (offset < total) {
-				const page = await turboDocxApiRequest(
-					ctx,
-					{
-						method: 'GET',
-						endpoint: '/v1/quotes',
-						qs: { ...baseQs, limit: PAGE_SIZE, offset },
-						unwrap: 'smart',
-					},
-					i,
-				);
-				const results = (page.results as IDataObject[]) ?? [];
-				total = (page.totalRecords as number) ?? results.length;
-				for (const r of results) out.push({ json: r });
-				if (results.length === 0) break;
-				offset += results.length;
-			}
-		} else {
-			const limit = ctx.getNodeParameter('limit', i, 50) as number;
-			const page = await turboDocxApiRequest(
-				ctx,
-				{ method: 'GET', endpoint: '/v1/quotes', qs: { ...baseQs, limit, offset: 0 }, unwrap: 'smart' },
-				i,
-			);
-			const results = (page.results as IDataObject[]) ?? [];
-			for (const r of results) out.push({ json: r });
-		}
-
-		return out;
+		const records = await paginatedList(ctx, { endpoint: '/v1/quotes', i, baseQs });
+		return records.map((r) => ({ json: r }));
 	}
 
 	if (operation === 'update') {
@@ -294,7 +262,9 @@ async function executeQuoteResource(
 		const createBody: IDataObject = { name, companyId, contactId };
 		if (fields.currency) createBody.currency = fields.currency;
 		if (fields.termDays !== undefined) createBody.termDays = fields.termDays;
-		if (fields.renewalPeriod) createBody.renewalPeriod = fields.renewalPeriod;
+		// renewalPeriod is only accepted for auto-renewal terms (termDays === -1).
+		if (fields.termDays === -1 && fields.renewalPeriod)
+			createBody.renewalPeriod = fields.renewalPeriod;
 		if (fields.validUntil) createBody.validUntil = fields.validUntil;
 		if (fields.taxRate !== undefined) createBody.taxRate = fields.taxRate;
 		if (fields.priceBookId) createBody.priceBookId = fields.priceBookId;
@@ -355,7 +325,7 @@ async function executeQuoteResource(
 		return [{ json: sent }];
 	}
 
-	throw new Error(`Unknown Quote operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Quote operation: ${operation}`, { itemIndex: i });
 }
 
 // ===================================================================
@@ -370,52 +340,18 @@ async function executeQuoteLineItemResource(
 	const quoteId = ctx.getNodeParameter('quoteId', i) as string;
 
 	if (operation === 'list') {
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.lineItemType) baseQs.lineItemType = filters.lineItemType;
 		if (filters.billingFrequency) baseQs.billingFrequency = filters.billingFrequency;
 		if (filters.parentLineItemId) baseQs.parentLineItemId = filters.parentLineItemId;
 
-		const out: INodeExecutionData[] = [];
-
-		if (returnAll) {
-			let offset = 0;
-			let total = Infinity;
-			while (offset < total) {
-				const page = await turboDocxApiRequest(
-					ctx,
-					{
-						method: 'GET',
-						endpoint: `/v1/quotes/${quoteId}/items`,
-						qs: { ...baseQs, limit: PAGE_SIZE, offset },
-						unwrap: 'smart',
-					},
-					i,
-				);
-				const results = (page.results as IDataObject[]) ?? [];
-				total = (page.totalRecords as number) ?? results.length;
-				for (const r of results) out.push({ json: r });
-				if (results.length === 0) break;
-				offset += results.length;
-			}
-		} else {
-			const limit = ctx.getNodeParameter('limit', i, 50) as number;
-			const page = await turboDocxApiRequest(
-				ctx,
-				{
-					method: 'GET',
-					endpoint: `/v1/quotes/${quoteId}/items`,
-					qs: { ...baseQs, limit, offset: 0 },
-					unwrap: 'smart',
-				},
-				i,
-			);
-			const results = (page.results as IDataObject[]) ?? [];
-			for (const r of results) out.push({ json: r });
-		}
-
-		return out;
+		const records = await paginatedList(ctx, {
+			endpoint: `/v1/quotes/${quoteId}/items`,
+			i,
+			baseQs,
+		});
+		return records.map((r) => ({ json: r }));
 	}
 
 	if (operation === 'add') {
@@ -444,7 +380,7 @@ async function executeQuoteLineItemResource(
 		const items = parseJsonParameter(
 			ctx,
 			ctx.getNodeParameter('bundleItemsJson', i) as string,
-			'items',
+			'bundleItemsJson',
 			i,
 		);
 		const payload = Array.isArray(items) ? items : [items];
@@ -518,7 +454,7 @@ async function executeQuoteLineItemResource(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Quote Line Item operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Quote Line Item operation: ${operation}`, { itemIndex: i });
 }
 
 // ===================================================================

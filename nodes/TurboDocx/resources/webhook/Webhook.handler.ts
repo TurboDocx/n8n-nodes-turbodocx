@@ -1,11 +1,12 @@
-import { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
-import { turboDocxApiRequest, parseJsonParameter } from '../../shared/GenericFunctions';
+import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError } from 'n8n-workflow';
+import {
+	turboDocxApiRequest,
+	parseJsonParameter,
+	paginatedList,
+} from '../../shared/GenericFunctions';
 
 /** Fixed webhook name baked into every signature-webhook path. */
 const SIGNATURE = 'signature';
-
-/** Page size used when "Return All" is enabled for delivery listing. */
-const PAGE_SIZE = 100;
 
 export async function executeWebhook(
 	ctx: IExecuteFunctions,
@@ -117,7 +118,6 @@ export async function executeWebhook(
 	}
 
 	if (operation === 'listDeliveries') {
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.eventType !== undefined && filters.eventType !== '') {
@@ -126,36 +126,9 @@ export async function executeWebhook(
 		if (filters.isDelivered !== undefined) baseQs.isDelivered = filters.isDelivered;
 		if (filters.httpStatus !== undefined) baseQs.httpStatus = filters.httpStatus;
 
-		const out: INodeExecutionData[] = [];
 		const endpoint = `/api/webhooks/${SIGNATURE}/deliveries`;
-
-		if (returnAll) {
-			let offset = 0;
-			let total = Infinity;
-			while (offset < total) {
-				const page = await turboDocxApiRequest(
-					ctx,
-					{ method: 'GET', endpoint, qs: { ...baseQs, limit: PAGE_SIZE, offset }, unwrap: 'smart' },
-					i,
-				);
-				const results = (page.results as IDataObject[]) ?? [];
-				total = (page.totalRecords as number) ?? results.length;
-				for (const r of results) out.push({ json: r });
-				if (results.length === 0) break;
-				offset += results.length;
-			}
-		} else {
-			const limit = ctx.getNodeParameter('limit', i, 50) as number;
-			const page = await turboDocxApiRequest(
-				ctx,
-				{ method: 'GET', endpoint, qs: { ...baseQs, limit, offset: 0 }, unwrap: 'smart' },
-				i,
-			);
-			const results = (page.results as IDataObject[]) ?? [];
-			for (const r of results) out.push({ json: r });
-		}
-
-		return out;
+		const records = await paginatedList(ctx, { endpoint, i, baseQs });
+		return records.map((r) => ({ json: r }));
 	}
 
 	if (operation === 'getStats') {
@@ -171,5 +144,5 @@ export async function executeWebhook(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Webhook operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Webhook operation: ${operation}`, { itemIndex: i });
 }

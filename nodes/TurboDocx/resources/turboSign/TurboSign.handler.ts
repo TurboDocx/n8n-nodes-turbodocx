@@ -1,4 +1,4 @@
-import { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
+import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError } from 'n8n-workflow';
 import {
 	turboDocxApiRequest,
 	turboDocxApiRequestBinary,
@@ -168,5 +168,5 @@ export async function executeTurboSign(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown TurboSign operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown TurboSign operation: ${operation}`, { itemIndex: i });
 }

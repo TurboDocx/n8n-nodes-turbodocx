@@ -118,7 +118,7 @@ export const quoteOperations: INodeProperties[] = [
 			{
 				name: 'Handle Expired',
 				value: 'handleExpired',
-				description: 'Resolve an expired sent quote by voiding, declining, or extending it',
+				description: 'Resolve an expired sent quote by voiding or declining it',
 				action: 'Handle an expired quote',
 			},
 			{
@@ -258,7 +258,8 @@ export const quoteFields: INodeProperties[] = [
 				type: 'options',
 				options: RENEWAL_OPTIONS,
 				default: 'monthly',
-				description: 'Renewal period for recurring line items',
+				description:
+					'Renewal period for an auto-renewal quote. Only applies when Term Days is -1; ignored otherwise.',
 			},
 			{
 				displayName: 'Tax Rate',
@@ -271,9 +272,10 @@ export const quoteFields: INodeProperties[] = [
 				displayName: 'Term Days',
 				name: 'termDays',
 				type: 'number',
-				typeOptions: { minValue: 0 },
+				typeOptions: { minValue: -1 },
 				default: 30,
-				description: 'Number of days the quote terms cover',
+				description:
+					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is ignored for any other value).',
 			},
 			{
 				displayName: 'Valid Until',
@@ -368,7 +370,8 @@ export const quoteFields: INodeProperties[] = [
 				type: 'options',
 				options: RENEWAL_OPTIONS,
 				default: 'monthly',
-				description: 'Renewal period for recurring line items',
+				description:
+					'Renewal period for an auto-renewal quote. Only applies when Term Days is -1; ignored otherwise.',
 			},
 			{
 				displayName: 'Tax Rate',
@@ -381,9 +384,10 @@ export const quoteFields: INodeProperties[] = [
 				displayName: 'Term Days',
 				name: 'termDays',
 				type: 'number',
-				typeOptions: { minValue: 0 },
+				typeOptions: { minValue: -1 },
 				default: 30,
-				description: 'Number of days the quote terms cover',
+				description:
+					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is ignored for any other value).',
 			},
 			{
 				displayName: 'Valid Until',
@@ -412,7 +416,7 @@ export const quoteFields: INodeProperties[] = [
 		displayName: 'Limit',
 		name: 'limit',
 		type: 'number',
-		typeOptions: { minValue: 1 },
+		typeOptions: { minValue: 1, maxValue: 100 },
 		default: 50,
 		description: 'Max number of results to return',
 		displayOptions: {
@@ -719,7 +723,8 @@ export const quoteFields: INodeProperties[] = [
 				type: 'options',
 				options: RENEWAL_OPTIONS,
 				default: 'monthly',
-				description: 'Renewal period for recurring line items',
+				description:
+					'Renewal period for an auto-renewal quote. Only applies when Term Days is -1; ignored otherwise.',
 			},
 			{
 				displayName: 'Send Valid Until',
@@ -739,9 +744,10 @@ export const quoteFields: INodeProperties[] = [
 				displayName: 'Term Days',
 				name: 'termDays',
 				type: 'number',
-				typeOptions: { minValue: 0 },
+				typeOptions: { minValue: -1 },
 				default: 30,
-				description: 'Number of days the quote terms cover',
+				description:
+					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is ignored for any other value).',
 			},
 			{
 				displayName: 'Valid Until',
@@ -897,7 +903,7 @@ export const quoteLineItemFields: INodeProperties[] = [
 		displayName: 'Limit',
 		name: 'limit',
 		type: 'number',
-		typeOptions: { minValue: 1 },
+		typeOptions: { minValue: 1, maxValue: 100 },
 		default: 50,
 		description: 'Max number of results to return',
 		displayOptions: {
@@ -1057,7 +1063,7 @@ export const quoteLineItemFields: INodeProperties[] = [
 				displayName: 'Quantity',
 				name: 'quantity',
 				type: 'number',
-				typeOptions: { minValue: 0 },
+				typeOptions: { minValue: 1 },
 				default: 1,
 				description: 'Quantity of the line item',
 			},

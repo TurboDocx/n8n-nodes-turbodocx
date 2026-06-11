@@ -15,45 +15,45 @@ export const turboSignOperations: INodeProperties[] = [
 		},
 		options: [
 			{
-				name: 'TurboSign: Download Document',
+				name: 'Download Document',
 				value: 'downloadDocument',
 				description: 'Download the signed PDF document',
 				action: 'Download signed document',
 			},
 			{
-				name: 'TurboSign: Get Audit Trail',
+				name: 'Get Audit Trail',
 				value: 'getAuditTrail',
 				description: 'Get the tamper-evident audit trail for a signature document',
-				action: 'Get document audit trail',
+				action: 'Get audit trail',
 			},
 			{
-				name: 'TurboSign: Get Document Status',
+				name: 'Get Review Link',
+				value: 'prepareForReview',
+				description:
+					'Upload a document with fields and recipients and get a review link (no emails sent)',
+				action: 'Get review link',
+			},
+			{
+				name: 'Get Status',
 				value: 'getStatus',
 				description: 'Get the current status of a signature document',
 				action: 'Get document status',
 			},
 			{
-				name: 'TurboSign: Prepare For Review',
-				value: 'prepareForReview',
-				description:
-					'Upload a document with fields and recipients, get preview URL (no emails sent)',
-				action: 'Prepare document for review',
+				name: 'Resend Email',
+				value: 'resendEmail',
+				description: 'Resend the signature request email to specific recipients',
+				action: 'Resend signature email',
 			},
 			{
-				name: 'TurboSign: Prepare For Signing',
+				name: 'Send Signature',
 				value: 'prepareForSigning',
 				description:
-					'Upload a document with fields and recipients, send signature request emails',
-				action: 'Prepare document for signing',
+					'Upload a document with fields and recipients and email a signature request',
+				action: 'Send a signature request',
 			},
 			{
-				name: 'TurboSign: Resend Signature Request Email',
-				value: 'resendEmail',
-				description: 'Resend signature request emails to specific recipients',
-				action: 'Resend signature request email',
-			},
-			{
-				name: 'TurboSign: Void Document',
+				name: 'Void',
 				value: 'voidDocument',
 				description: 'Cancel a signature request',
 				action: 'Void signature document',

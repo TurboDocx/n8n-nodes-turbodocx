@@ -1,0 +1,38 @@
+import { TurboDocx } from '../../../TurboDocx.node';
+import { makeExecuteCtx, okResponse } from '../../../__tests__/helpers';
+
+function captureCreateBody(additionalFields: Record<string, unknown>) {
+	const capture: { body?: Record<string, unknown> } = {};
+	const http = jest.fn(async (_cred: string, opts: { body?: Record<string, unknown> }) => {
+		capture.body = opts.body;
+		return okResponse({ result: { id: 'q1' } });
+	});
+	const ctx = makeExecuteCtx({
+		itemCount: 1,
+		params: {
+			resource: 'quote',
+			operation: 'create',
+			name: 'Q',
+			companyId: 'c1',
+			contactId: 'p1',
+			additionalFields,
+		},
+		http,
+	});
+	return { ctx, capture };
+}
+
+describe('Quote create renewalPeriod / termDays coupling', () => {
+	it('omits renewalPeriod for a normal fixed term (backend rejects it unless termDays === -1)', async () => {
+		const { ctx, capture } = captureCreateBody({ termDays: 30, renewalPeriod: 'monthly' });
+		await TurboDocx.prototype.execute.call(ctx);
+		expect(capture.body).toMatchObject({ termDays: 30 });
+		expect(capture.body).not.toHaveProperty('renewalPeriod');
+	});
+
+	it('sends renewalPeriod only for auto-renewal (termDays === -1)', async () => {
+		const { ctx, capture } = captureCreateBody({ termDays: -1, renewalPeriod: 'annually' });
+		await TurboDocx.prototype.execute.call(ctx);
+		expect(capture.body).toMatchObject({ termDays: -1, renewalPeriod: 'annually' });
+	});
+});

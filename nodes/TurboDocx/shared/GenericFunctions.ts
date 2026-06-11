@@ -57,8 +57,17 @@ export function buildApiErrorMessage(
 		? (errorBody as Record<string, unknown>)
 		: null;
 
+	// The `error` field may be a nested object `{ message, code }` (TurboQuote) rather
+	// than a string. Capture it so we read its message instead of stringifying "[object Object]".
+	const nestedError =
+		obj && typeof obj.error === 'object' && obj.error !== null
+			? (obj.error as Record<string, unknown>)
+			: null;
+
 	let errorMessage = 'Request failed';
-	const errorCode = obj ? ((obj.type as string) || (obj.code as string) || '') : '';
+	const errorCode = obj
+		? ((obj.type as string) || (obj.code as string) || (nestedError?.code as string) || '')
+		: '';
 
 	if (
 		obj &&
@@ -76,10 +85,15 @@ export function buildApiErrorMessage(
 			})
 			.join('; ');
 		errorMessage = errorDetails || (obj.message as string) || 'Validation failed';
-	} else if (obj && obj.error) {
-		errorMessage = obj.error as string;
-	} else if (obj && obj.message) {
-		errorMessage = obj.message as string;
+	} else if (nestedError) {
+		errorMessage = (nestedError.message as string) || JSON.stringify(nestedError);
+	} else if (obj && typeof obj.message === 'string' && obj.message) {
+		// Prefer the human-readable message over a bare `error` code string. The code
+		// (e.g. "TemplateNotFound") otherwise gets mangled by n8n's COMMON_ERRORS scan
+		// (it contains "ENOTFOUND") into a bogus connection/host error.
+		errorMessage = obj.message;
+	} else if (obj && typeof obj.error === 'string' && obj.error) {
+		errorMessage = obj.error;
 	} else if (typeof errorBody === 'string' && errorBody) {
 		errorMessage = errorBody;
 	}
@@ -157,24 +171,50 @@ export async function turboDocxApiRequest(
 ): Promise<IDataObject> {
 	const credentialName = options.credentialName ?? CRED_STANDARD;
 	const baseUrl = await getBaseUrl(ctx, credentialName);
+	const url = `${baseUrl}${options.endpoint}`;
 
-	const requestOptions: IHttpRequestOptions = {
-		method: options.method,
-		url: `${baseUrl}${options.endpoint}`,
-		ignoreHttpStatusErrors: true,
-		returnFullResponse: true,
-	};
-	if (options.qs && Object.keys(options.qs).length > 0) requestOptions.qs = options.qs;
-	if (options.body !== undefined) {
-		requestOptions.body = options.body;
-		if (!options.multipart) requestOptions.json = true;
+	let response: FullResponse;
+
+	if (options.multipart && options.body !== undefined) {
+		// Multipart uploads go through the legacy request helper's `formData` option.
+		// Community nodes cannot bundle `form-data` (n8n Cloud bans dependencies), and
+		// the modern httpRequest helper only emits multipart for a real FormData
+		// instance. The legacy path serialises a plain `{ key: { value, options } }`
+		// (and arrays of those under one key, e.g. `images`) into form parts itself.
+		// The options object is typed inline: IRequestOptions is flagged deprecated for
+		// direct import, but is what the legacy formData helper accepts.
+		const requestOptions = {
+			method: options.method,
+			uri: url,
+			formData: options.body,
+			json: true,
+			simple: false,
+			resolveWithFullResponse: true,
+			...(options.qs && Object.keys(options.qs).length > 0 ? { qs: options.qs } : {}),
+		};
+		response = (await ctx.helpers.requestWithAuthentication.call(
+			ctx,
+			credentialName,
+			requestOptions,
+		)) as FullResponse;
+	} else {
+		const requestOptions: IHttpRequestOptions = {
+			method: options.method,
+			url,
+			ignoreHttpStatusErrors: true,
+			returnFullResponse: true,
+		};
+		if (options.qs && Object.keys(options.qs).length > 0) requestOptions.qs = options.qs;
+		if (options.body !== undefined) {
+			requestOptions.body = options.body;
+			requestOptions.json = true;
+		}
+		response = (await ctx.helpers.httpRequestWithAuthentication.call(
+			ctx,
+			credentialName,
+			requestOptions,
+		)) as FullResponse;
 	}
-
-	const response = (await ctx.helpers.httpRequestWithAuthentication.call(
-		ctx,
-		credentialName,
-		requestOptions,
-	)) as FullResponse;
 
 	if (response.statusCode >= 400) {
 		throw new NodeOperationError(
@@ -185,6 +225,64 @@ export async function turboDocxApiRequest(
 	}
 
 	return applyUnwrap((response.body ?? {}) as IDataObject, options.unwrap);
+}
+
+export interface PaginatedListOptions {
+	/** API path beginning with `/`. */
+	endpoint: string;
+	/** Current input item index (for error attribution and param reads). */
+	i: number;
+	/** Extra query params merged into every page request. */
+	baseQs?: IDataObject;
+	/** Credential type to authenticate with. Defaults to the standard API key. */
+	credentialName?: string;
+	/** Envelope unwrapping for each page (default `smart`). */
+	unwrap?: UnwrapMode;
+	/** Page size used when Return All is enabled (default 100). */
+	pageSize?: number;
+}
+
+/**
+ * Walk a `{ results, totalRecords }` list endpoint, honouring the node's
+ * `returnAll` / `limit` parameters. When Return All is on it pages by `offset`
+ * until a short (< pageSize) or empty page — it does NOT rely on `totalRecords`,
+ * so a missing/wrong count never truncates results to a single page.
+ */
+export async function paginatedList(
+	ctx: IExecuteFunctions,
+	options: PaginatedListOptions,
+): Promise<IDataObject[]> {
+	const { endpoint, i } = options;
+	const pageSize = options.pageSize ?? 100;
+	const baseQs = options.baseQs ?? {};
+	const unwrap = options.unwrap ?? 'smart';
+	const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
+	const out: IDataObject[] = [];
+
+	if (!returnAll) {
+		const limit = ctx.getNodeParameter('limit', i, 50) as number;
+		const page = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint, qs: { ...baseQs, limit, offset: 0 }, unwrap, credentialName: options.credentialName },
+			i,
+		);
+		return ((page.results as IDataObject[]) ?? []).slice();
+	}
+
+	let offset = 0;
+	let hasMore = true;
+	while (hasMore) {
+		const page = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint, qs: { ...baseQs, limit: pageSize, offset }, unwrap, credentialName: options.credentialName },
+			i,
+		);
+		const results = (page.results as IDataObject[]) ?? [];
+		out.push(...results);
+		hasMore = results.length === pageSize;
+		offset += results.length;
+	}
+	return out;
 }
 
 /**
@@ -269,8 +367,17 @@ export function normalizeUnexpectedError(
 		backendResponse = errorObj.cause.response.body as Record<string, unknown>;
 	}
 
-	const apiErrorMessage = (backendResponse?.error as string) || (backendResponse?.message as string);
-	const apiErrorCode = backendResponse?.code as string;
+	// `error` may be a nested { message, code } object or a code string; prefer the
+	// human-readable message (mirrors buildApiErrorMessage) so users don't see
+	// "[object Object]" or a code that n8n mangles into a bogus connection error.
+	const nestedError =
+		backendResponse && typeof backendResponse.error === 'object' && backendResponse.error !== null
+			? (backendResponse.error as Record<string, unknown>)
+			: null;
+	const apiErrorMessage = nestedError
+		? ((nestedError.message as string) || JSON.stringify(nestedError))
+		: ((backendResponse?.message as string) || (backendResponse?.error as string));
+	const apiErrorCode = (backendResponse?.code as string) || (nestedError?.code as string);
 
 	let errorMessage = apiErrorMessage || errorObj.message || 'Request failed';
 	const errorCode = (backendResponse?.type as string) || apiErrorCode || '';

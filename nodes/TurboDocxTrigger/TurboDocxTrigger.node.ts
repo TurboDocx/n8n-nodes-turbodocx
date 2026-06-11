@@ -195,9 +195,18 @@ export class TurboDocxTrigger implements INodeType {
 					events,
 				});
 				if (created.statusCode >= 400) {
+					// Only an auth status genuinely implies an insufficient key; a 409 means
+					// another receiver created the webhook between our GET and POST, and a
+					// 400 is a validation problem — don't misattribute those to the key.
+					const hint =
+						created.statusCode === 401 || created.statusCode === 403
+							? ' An administrator API key is required.'
+							: created.statusCode === 409
+								? ' A signature webhook already exists; re-run to attach to it.'
+								: '';
 					throw new NodeOperationError(
 						this.getNode(),
-						`Failed to create the TurboDocx signature webhook (HTTP ${created.statusCode}). An administrator API key is required.`,
+						`Failed to create the TurboDocx signature webhook (HTTP ${created.statusCode}).${hint}`,
 					);
 				}
 				const body = (created.body.data as IDataObject) ?? created.body;
@@ -222,7 +231,13 @@ export class TurboDocxTrigger implements INodeType {
 						// We created it and we're the last URL: remove the webhook.
 						await apiRequest(this, 'DELETE', `/api/webhooks/${WEBHOOK_NAME}`);
 					} else {
-						await apiRequest(this, 'PATCH', `/api/webhooks/${WEBHOOK_NAME}`, { urls });
+						// Shared webhook we only attached to, now with no receivers: leave it in
+						// place (other consumers may re-add URLs) but deactivate it so it isn't
+						// an active webhook with zero URLs.
+						await apiRequest(this, 'PATCH', `/api/webhooks/${WEBHOOK_NAME}`, {
+							urls,
+							isActive: false,
+						});
 					}
 				}
 
@@ -249,6 +264,24 @@ export class TurboDocxTrigger implements INodeType {
 		const toleranceSeconds =
 			options.toleranceSeconds !== undefined ? (options.toleranceSeconds as number) : 300;
 
+		// Explicitly reject a delivery with a status code so the sender's HTTP
+		// connection is closed immediately instead of hanging until its timeout.
+		const reject = (statusCode: number, message: string): IWebhookResponseData => {
+			this.getResponseObject().status(statusCode).send(message).end();
+			return { noWebhookResponse: true };
+		};
+
+		// Fail-open guard: verification is enabled but we hold no secret (this node
+		// attached to a pre-existing org-level webhook, which never returns one).
+		// Warn so the inert security control is visible rather than silently off.
+		if (verifySignature && !staticData.secret) {
+			this.logger.warn(
+				'TurboDocx Trigger: "Verify Signature" is enabled but no webhook secret is stored ' +
+					'(this node attached to a pre-existing signature webhook). Deliveries are NOT being ' +
+					'verified. Re-create the webhook from this node to obtain a secret, or disable Verify Signature.',
+			);
+		}
+
 		// Signature verification (when we hold the secret).
 		if (verifySignature && staticData.secret) {
 			const signature =
@@ -265,25 +298,25 @@ export class TurboDocxTrigger implements INodeType {
 			const rawBody = req.rawBody;
 
 			if (!rawBody) {
-				// Can't verify without the raw bytes: fail closed (drop the delivery)
-				// rather than re-stringifying and producing a false match/mismatch.
-				return { noWebhookResponse: true };
+				// Can't verify without the raw bytes: fail closed, but answer the request.
+				return reject(400, 'Cannot verify signature: raw request body unavailable');
 			}
 
 			const valid = verifyWebhookSignature(rawBody, signature, timestamp, staticData.secret, {
 				toleranceSeconds,
 			});
 			if (!valid) {
-				// Reject without starting the workflow.
-				return { noWebhookResponse: true };
+				return reject(401, 'Invalid webhook signature');
 			}
 		}
 
-		// Filter by subscribed event type when present on the payload.
+		// Filter by subscribed event type when present on the payload. Return {} so
+		// n8n sends its default 200 (the delivery is acknowledged, just not run) —
+		// returning noWebhookResponse without writing a response would hang the caller.
 		const eventType =
 			(bodyData.eventType as string) || (bodyData.event as string) || undefined;
 		if (eventType && subscribedEvents.length > 0 && !subscribedEvents.includes(eventType)) {
-			return { noWebhookResponse: true };
+			return {};
 		}
 
 		return {

@@ -1,8 +1,9 @@
-import { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
-import { turboDocxApiRequest, parseJsonParameter } from '../../shared/GenericFunctions';
-
-/** Page size used when "Return All" is enabled. */
-const PAGE_SIZE = 100;
+import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError } from 'n8n-workflow';
+import {
+	turboDocxApiRequest,
+	parseJsonParameter,
+	paginatedList,
+} from '../../shared/GenericFunctions';
 
 /**
  * Paginate a TurboQuote-style list endpoint (`{ data: { results, totalRecords } }`).
@@ -10,40 +11,12 @@ const PAGE_SIZE = 100;
  */
 async function paginateList(
 	ctx: IExecuteFunctions,
+	i: number,
 	endpoint: string,
 	baseQs: IDataObject,
-	returnAll: boolean,
-	limit: number,
-	i: number,
 ): Promise<INodeExecutionData[]> {
-	const out: INodeExecutionData[] = [];
-
-	if (returnAll) {
-		let offset = 0;
-		let total = Infinity;
-		while (offset < total) {
-			const page = await turboDocxApiRequest(
-				ctx,
-				{ method: 'GET', endpoint, qs: { ...baseQs, limit: PAGE_SIZE, offset }, unwrap: 'smart' },
-				i,
-			);
-			const results = (page.results as IDataObject[]) ?? [];
-			total = (page.totalRecords as number) ?? results.length;
-			for (const r of results) out.push({ json: r });
-			if (results.length === 0) break;
-			offset += results.length;
-		}
-	} else {
-		const page = await turboDocxApiRequest(
-			ctx,
-			{ method: 'GET', endpoint, qs: { ...baseQs, limit, offset: 0 }, unwrap: 'smart' },
-			i,
-		);
-		const results = (page.results as IDataObject[]) ?? [];
-		for (const r of results) out.push({ json: r });
-	}
-
-	return out;
+	const records = await paginatedList(ctx, { endpoint, i, baseQs });
+	return records.map((r) => ({ json: r }));
 }
 
 /**
@@ -108,8 +81,6 @@ async function executeCompany(
 	}
 
 	if (operation === 'list') {
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
-		const limit = ctx.getNodeParameter('limit', i, 50) as number;
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
@@ -119,17 +90,15 @@ async function executeCompany(
 				.map((s) => s.trim())
 				.filter((s) => s !== '');
 		}
-		return paginateList(ctx, '/v1/companies', baseQs, returnAll, limit, i);
+		return paginateList(ctx, i, '/v1/companies', baseQs);
 	}
 
 	if (operation === 'listContacts') {
 		const companyId = ctx.getNodeParameter('companyId', i) as string;
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
-		const limit = ctx.getNodeParameter('limit', i, 50) as number;
 		const filters = ctx.getNodeParameter('contactFilters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
-		return paginateList(ctx, `/v1/companies/${companyId}/contacts`, baseQs, returnAll, limit, i);
+		return paginateList(ctx, i, `/v1/companies/${companyId}/contacts`, baseQs);
 	}
 
 	if (operation === 'update') {
@@ -161,7 +130,7 @@ async function executeCompany(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Company operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Company operation: ${operation}`, { itemIndex: i });
 }
 
 async function executeContact(
@@ -191,14 +160,12 @@ async function executeContact(
 	}
 
 	if (operation === 'list') {
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
-		const limit = ctx.getNodeParameter('limit', i, 50) as number;
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
 		if (filters.companyId !== undefined && filters.companyId !== '')
 			baseQs.companyId = filters.companyId;
-		return paginateList(ctx, '/v1/contacts', baseQs, returnAll, limit, i);
+		return paginateList(ctx, i, '/v1/contacts', baseQs);
 	}
 
 	if (operation === 'update') {
@@ -228,7 +195,7 @@ async function executeContact(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Contact operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Contact operation: ${operation}`, { itemIndex: i });
 }
 
 /** Keys accepted by the quote-template create/update body. */
@@ -251,12 +218,10 @@ async function executeQuoteTemplate(
 	i: number,
 ): Promise<INodeExecutionData[]> {
 	if (operation === 'list') {
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
-		const limit = ctx.getNodeParameter('limit', i, 50) as number;
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
-		return paginateList(ctx, '/v1/quote-templates', baseQs, returnAll, limit, i);
+		return paginateList(ctx, i, '/v1/quote-templates', baseQs);
 	}
 
 	if (operation === 'getDefault') {
@@ -320,7 +285,7 @@ async function executeQuoteTemplate(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Quote Template operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Quote Template operation: ${operation}`, { itemIndex: i });
 }
 
 async function executeQuoteType(
@@ -342,15 +307,13 @@ async function executeQuoteType(
 	}
 
 	if (operation === 'list') {
-		const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
-		const limit = ctx.getNodeParameter('limit', i, 50) as number;
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
 		if (filters.categoryType !== undefined && filters.categoryType !== '')
 			baseQs.categoryType = filters.categoryType;
 		if (filters.includeUsage !== undefined) baseQs.includeUsage = filters.includeUsage;
-		return paginateList(ctx, '/v1/types', baseQs, returnAll, limit, i);
+		return paginateList(ctx, i, '/v1/types', baseQs);
 	}
 
 	if (operation === 'update') {
@@ -377,7 +340,7 @@ async function executeQuoteType(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Quote Type operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Quote Type operation: ${operation}`, { itemIndex: i });
 }
 
 export async function executeCrm(
@@ -391,5 +354,5 @@ export async function executeCrm(
 	if (resource === 'quoteTemplate') return executeQuoteTemplate(ctx, operation, i);
 	if (resource === 'quoteType') return executeQuoteType(ctx, operation, i);
 
-	throw new Error(`Unknown CRM resource: ${resource}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown CRM resource: ${resource}`, { itemIndex: i });
 }

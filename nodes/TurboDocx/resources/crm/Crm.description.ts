@@ -181,7 +181,7 @@ export const companyFields: INodeProperties[] = [
 		displayName: 'Limit',
 		name: 'limit',
 		type: 'number',
-		typeOptions: { minValue: 1 },
+		typeOptions: { minValue: 1, maxValue: 100 },
 		default: 50,
 		description: 'Max number of results to return',
 		displayOptions: {
@@ -434,7 +434,7 @@ export const contactFields: INodeProperties[] = [
 		displayName: 'Limit',
 		name: 'limit',
 		type: 'number',
-		typeOptions: { minValue: 1 },
+		typeOptions: { minValue: 1, maxValue: 100 },
 		default: 50,
 		description: 'Max number of results to return',
 		displayOptions: {
@@ -684,7 +684,7 @@ export const quoteTemplateFields: INodeProperties[] = [
 		displayName: 'Limit',
 		name: 'limit',
 		type: 'number',
-		typeOptions: { minValue: 1 },
+		typeOptions: { minValue: 1, maxValue: 100 },
 		default: 50,
 		description: 'Max number of results to return',
 		displayOptions: {
@@ -849,7 +849,7 @@ export const quoteTypeFields: INodeProperties[] = [
 		displayName: 'Limit',
 		name: 'limit',
 		type: 'number',
-		typeOptions: { minValue: 1 },
+		typeOptions: { minValue: 1, maxValue: 100 },
 		default: 50,
 		description: 'Max number of results to return',
 		displayOptions: {

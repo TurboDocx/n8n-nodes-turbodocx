@@ -1,12 +1,10 @@
-import { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
+import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError } from 'n8n-workflow';
 import {
 	turboDocxApiRequest,
 	parseJsonParameter,
 	CRED_PARTNER,
+	paginatedList as sharedPaginatedList,
 } from '../../shared/GenericFunctions';
-
-/** Page size used when "Return All" is enabled. */
-const PAGE_SIZE = 100;
 
 /** Resolve the partner ID from the partner credential (it is not a node parameter). */
 async function getPartnerId(ctx: IExecuteFunctions): Promise<string> {
@@ -27,48 +25,14 @@ async function paginatedList(
 	baseQs: IDataObject,
 	i: number,
 ): Promise<INodeExecutionData[]> {
-	const returnAll = ctx.getNodeParameter('returnAll', i, false) as boolean;
-	const out: INodeExecutionData[] = [];
-
-	if (returnAll) {
-		let offset = 0;
-		let total = Infinity;
-		while (offset < total) {
-			const page = await turboDocxApiRequest(
-				ctx,
-				{
-					method: 'GET',
-					endpoint,
-					qs: { ...baseQs, limit: PAGE_SIZE, offset },
-					credentialName: CRED_PARTNER,
-					unwrap: 'data',
-				},
-				i,
-			);
-			const results = (page.results as IDataObject[]) ?? [];
-			total = (page.totalRecords as number) ?? results.length;
-			for (const r of results) out.push({ json: r });
-			if (results.length === 0) break;
-			offset += results.length;
-		}
-	} else {
-		const limit = ctx.getNodeParameter('limit', i, 50) as number;
-		const page = await turboDocxApiRequest(
-			ctx,
-			{
-				method: 'GET',
-				endpoint,
-				qs: { ...baseQs, limit, offset: 0 },
-				credentialName: CRED_PARTNER,
-				unwrap: 'data',
-			},
-			i,
-		);
-		const results = (page.results as IDataObject[]) ?? [];
-		for (const r of results) out.push({ json: r });
-	}
-
-	return out;
+	const records = await sharedPaginatedList(ctx, {
+		endpoint,
+		i,
+		baseQs,
+		credentialName: CRED_PARTNER,
+		unwrap: 'data',
+	});
+	return records.map((r) => ({ json: r }));
 }
 
 // =====================================================================
@@ -194,7 +158,7 @@ async function executePartnerOrganization(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Partner Organization operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Partner Organization operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================
@@ -269,7 +233,7 @@ async function executePartnerOrgUser(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Partner Org User operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Partner Org User operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================
@@ -333,7 +297,7 @@ async function executePartnerOrgApiKey(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Partner Org API Key operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Partner Org API Key operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================
@@ -411,7 +375,7 @@ async function executePartnerApiKey(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Partner API Key operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Partner API Key operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================
@@ -507,7 +471,7 @@ async function executePartnerUser(
 		return [{ json: result }];
 	}
 
-	throw new Error(`Unknown Partner User operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Partner User operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================
@@ -533,7 +497,7 @@ async function executePartnerAuditLog(
 		return paginatedList(ctx, `/partner/${partnerId}/audit-logs`, baseQs, i);
 	}
 
-	throw new Error(`Unknown Partner Audit Log operation: ${operation}`);
+	throw new NodeOperationError(ctx.getNode(), `Unknown Partner Audit Log operation: ${operation}`, { itemIndex: i });
 }
 
 // =====================================================================
@@ -559,6 +523,6 @@ export async function executePartner(
 		case 'partnerAuditLog':
 			return executePartnerAuditLog(ctx, operation, i);
 		default:
-			throw new Error(`Unknown Partner resource: ${resource}`);
+			throw new NodeOperationError(ctx.getNode(), `Unknown Partner resource: ${resource}`, { itemIndex: i });
 	}
 }
