@@ -87,6 +87,40 @@ export function buildApiErrorMessage(
 	return `${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${statusCode}`;
 }
 
+/**
+ * Response envelope unwrapping. The TurboDocx backend wraps payloads in `{ data }`,
+ * and TurboQuote single-entity endpoints add a second `{ result }` layer. These modes
+ * mirror the SDK's `smartUnwrap` so n8n items carry the meaningful payload, not the envelope.
+ *
+ * - `none`   raw body (default — preserves the original TurboSign output shape)
+ * - `smart`  strip `{ data }` only when it is the sole key (SDK smartUnwrap)
+ * - `data`   take `.data` even alongside siblings like `message` (webhook POST/PATCH)
+ * - `result` smart-unwrap, then take `.result` (TurboQuote single-entity double-unwrap)
+ */
+export type UnwrapMode = 'none' | 'smart' | 'data' | 'result';
+
+export function applyUnwrap(body: IDataObject, mode: UnwrapMode = 'none'): IDataObject {
+	if (mode === 'none') return body;
+	if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
+
+	if (mode === 'data') {
+		return ('data' in body ? (body.data as IDataObject) : body) ?? ({} as IDataObject);
+	}
+
+	// smart: only unwrap when `data` is the sole key
+	let result = body;
+	const keys = Object.keys(result);
+	if (keys.length === 1 && keys[0] === 'data') {
+		result = result.data as IDataObject;
+	}
+
+	if (mode === 'result' && result && typeof result === 'object' && !Array.isArray(result)) {
+		if ('result' in result) return result.result as IDataObject;
+	}
+
+	return result;
+}
+
 async function getBaseUrl(
 	ctx: IExecuteFunctions | IHookFunctions,
 	credentialName: string,
@@ -108,6 +142,8 @@ export interface TurboDocxRequestOptions {
 	credentialName?: string;
 	/** Force multipart/form-data even without a binary `file` field. */
 	multipart?: boolean;
+	/** Response envelope unwrapping. Defaults to `none` (raw body). */
+	unwrap?: UnwrapMode;
 }
 
 /**
@@ -148,7 +184,7 @@ export async function turboDocxApiRequest(
 		);
 	}
 
-	return (response.body ?? {}) as IDataObject;
+	return applyUnwrap((response.body ?? {}) as IDataObject, options.unwrap);
 }
 
 /**
@@ -260,6 +296,30 @@ export function normalizeUnexpectedError(
 		code: apiErrorCode || 'UnknownError',
 		statusCode,
 	};
+}
+
+/**
+ * Detect a downloaded file's type from its magic bytes, so binary outputs get a
+ * sensible filename + MIME type. Mirrors the SDK's `detectFileType`.
+ */
+export function detectBinaryType(buffer: Buffer): { extension: string; mimeType: string } {
+	if (buffer.length >= 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+		return { extension: 'pdf', mimeType: 'application/pdf' };
+	}
+	if (buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4b) {
+		const head = buffer.toString('utf8', 0, Math.min(buffer.length, 2000));
+		if (head.includes('ppt/')) {
+			return {
+				extension: 'pptx',
+				mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+			};
+		}
+		return {
+			extension: 'docx',
+			mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+		};
+	}
+	return { extension: 'bin', mimeType: 'application/octet-stream' };
 }
 
 /** Tiny helper: parse a JSON-string node parameter, throwing a clean error. */

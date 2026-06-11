@@ -82,7 +82,7 @@ export async function executeTurboSign(
 	ctx: IExecuteFunctions,
 	operation: string,
 	i: number,
-): Promise<INodeExecutionData> {
+): Promise<INodeExecutionData[]> {
 	if (operation === 'prepareForReview' || operation === 'prepareForSigning') {
 		const endpoint =
 			operation === 'prepareForReview'
@@ -94,7 +94,7 @@ export async function executeTurboSign(
 			{ method: 'POST', endpoint, body, multipart: true },
 			i,
 		);
-		return { json: result };
+		return [{ json: result }];
 	}
 
 	if (operation === 'getStatus') {
@@ -104,7 +104,7 @@ export async function executeTurboSign(
 			{ method: 'GET', endpoint: `/turbosign/documents/${documentId}/status` },
 			i,
 		);
-		return { json: result };
+		return [{ json: result }];
 	}
 
 	if (operation === 'downloadDocument') {
@@ -119,10 +119,12 @@ export async function executeTurboSign(
 			`signed-document-${documentId}.pdf`,
 			'application/pdf',
 		);
-		return {
-			json: { documentId },
-			binary: { data: binaryData },
-		};
+		return [
+			{
+				json: { documentId },
+				binary: { data: binaryData },
+			},
+		];
 	}
 
 	if (operation === 'voidDocument') {
@@ -137,7 +139,7 @@ export async function executeTurboSign(
 			},
 			i,
 		);
-		return { json: result };
+		return [{ json: result }];
 	}
 
 	if (operation === 'resendEmail') {
@@ -153,7 +155,7 @@ export async function executeTurboSign(
 			},
 			i,
 		);
-		return { json: result };
+		return [{ json: result }];
 	}
 
 	if (operation === 'getAuditTrail') {
@@ -163,7 +165,7 @@ export async function executeTurboSign(
 			{ method: 'GET', endpoint: `/turbosign/documents/${documentId}/audit-trail` },
 			i,
 		);
-		return { json: result };
+		return [{ json: result }];
 	}
 
 	throw new Error(`Unknown TurboSign operation: ${operation}`);

@@ -21,6 +21,12 @@ export const turboSignOperations: INodeProperties[] = [
 				action: 'Download signed document',
 			},
 			{
+				name: 'TurboSign: Get Audit Trail',
+				value: 'getAuditTrail',
+				description: 'Get the tamper-evident audit trail for a signature document',
+				action: 'Get document audit trail',
+			},
+			{
 				name: 'TurboSign: Get Document Status',
 				value: 'getStatus',
 				description: 'Get the current status of a signature document',
@@ -258,7 +264,7 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['getStatus', 'downloadDocument', 'voidDocument', 'resendEmail'],
+				operation: ['getStatus', 'downloadDocument', 'voidDocument', 'resendEmail', 'getAuditTrail'],
 			},
 		},
 		default: '',
