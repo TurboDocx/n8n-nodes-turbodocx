@@ -76,6 +76,9 @@ export class TurboDocxTrigger implements INodeType {
 				httpMethod: 'POST',
 				responseMode: 'onReceived',
 				path: 'webhook',
+				// Preserve the exact received bytes so the HMAC signature can be
+				// verified (re-serializing the parsed body would change whitespace).
+				rawBody: true,
 			},
 		],
 		properties: [
@@ -232,7 +235,10 @@ export class TurboDocxTrigger implements INodeType {
 	};
 
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
-		const req = this.getRequestObject();
+		const req = this.getRequestObject() as unknown as {
+			rawBody?: Buffer;
+			readRawBody?: () => Promise<void>;
+		};
 		const headers = this.getHeaderData() as IDataObject;
 		const bodyData = this.getBodyData() as IDataObject;
 		const options = this.getNodeParameter('options', {}) as IDataObject;
@@ -249,8 +255,20 @@ export class TurboDocxTrigger implements INodeType {
 				(headers['x-turbodocx-signature'] as string) || (headers['X-TurboDocx-Signature'] as string);
 			const timestamp =
 				(headers['x-turbodocx-timestamp'] as string) || (headers['X-TurboDocx-Timestamp'] as string);
-			const rawBody: Buffer | string =
-				(req as unknown as { rawBody?: Buffer }).rawBody ?? JSON.stringify(bodyData);
+
+			// HMAC must be computed over the EXACT received bytes. The webhook is
+			// registered with `rawBody: true` so n8n preserves them; never
+			// re-serialize the parsed body (whitespace would differ and never match).
+			if (!req.rawBody && typeof req.readRawBody === 'function') {
+				await req.readRawBody();
+			}
+			const rawBody = req.rawBody;
+
+			if (!rawBody) {
+				// Can't verify without the raw bytes: fail closed (drop the delivery)
+				// rather than re-stringifying and producing a false match/mismatch.
+				return { noWebhookResponse: true };
+			}
 
 			const valid = verifyWebhookSignature(rawBody, signature, timestamp, staticData.secret, {
 				toleranceSeconds,
