@@ -77,6 +77,56 @@ npm install @turbodocx/n8n-nodes-turbodocx
 
 **Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.)
 
+### Deliverable (Document Generation)
+
+Generate documents from TurboDocx templates with variable substitution, then list, fetch, update, delete, or download them (PDF or original DOCX/PPTX source).
+
+| Operation | What It Does |
+|-----------|-------------|
+| **Generate** | Create a document from a template with variables |
+| **Get** / **Get Many** | Fetch one deliverable, or list with search + pagination |
+| **Update** | Change name, description, or tags |
+| **Delete** | Soft-delete a deliverable |
+| **Download PDF** / **Download Source File** | Get the generated PDF or original DOCX/PPTX as binary |
+
+### TurboQuote
+
+Full CPQ surface, modelled as several resources for an intuitive UX:
+
+| Resource | Operations |
+|----------|-----------|
+| **Quote** | Get Many, Create, Get, Update, Delete, Duplicate, Apply/Remove Price Book, Download PDF, Send, Send With Deliverable, Decline, Void, Handle Expired, **Create and Send** (one-step macro) |
+| **Quote Line Item** | Get Many, Add, Add Bundle, Update, Remove |
+| **Product** | Get Many, Create, Get, Update, Delete, Duplicate, Primary Images (supports binary image upload) |
+| **Price Book** | Get Many, Create, Get, Update, Delete, Duplicate, List Products |
+| **Bundle** | Get Many, Create, Get, Update, Delete, Duplicate |
+| **Company** | Get Many, Create, Get, Update, Delete, List Contacts |
+| **Contact** | Get Many, Create, Update, Delete |
+| **Quote Template** | Get Many, Get Default, Get, Create, Update, Delete |
+| **Quote Type** | Get Many, Create, Update, Delete |
+
+### Webhooks
+
+| Resource / Node | What It Does |
+|-----------------|-------------|
+| **Webhook** (action) | Manage the org signature webhook: Create, Get, Update, Delete, Test, Notify, Regenerate Secret, List Deliveries, Replay Delivery, Get Stats |
+| **TurboDocx Trigger** (trigger node) | Starts a workflow on `signature.document.completed` / `signature.document.voided`. Auto-registers the webhook on activation, verifies the HMAC signature on every delivery, and cleans up on deactivation. |
+
+### TurboPartner
+
+Provision and manage customer organizations from a partner account. **Requires the separate "TurboDocx Partner API" credential** (a `TDXP-` partner key + partner ID).
+
+| Resource | Operations |
+|----------|-----------|
+| **Partner Organization** | Create, Get Many, Get, Update, Delete, Update Entitlements |
+| **Partner Org User** | Get Many, Add, Update Role, Remove, Resend Invite |
+| **Partner Org API Key** | Get Many, Create, Update, Revoke |
+| **Partner API Key** | Get Many, Create, Update, Revoke |
+| **Partner User** | Get Many, Add, Update Permissions, Remove, Resend Invite |
+| **Partner Audit Log** | Get Many (with filtering) |
+
+> **Credentials:** TurboSign, Deliverable, TurboQuote, and Webhook resources use the **TurboDocx API** credential (API key + Organization ID). The TurboPartner resources use the **TurboDocx Partner API** credential. The node shows the right credential automatically based on the selected resource.
+
 ## Usage Examples
 
 ### Simple Contract Signing Workflow
