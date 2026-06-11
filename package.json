@@ -56,10 +56,12 @@
         "n8nNodesApiVersion": 1,
         "strict": true,
         "credentials": [
-            "dist/credentials/TurboDocxApi.credentials.js"
+            "dist/credentials/TurboDocxApi.credentials.js",
+            "dist/credentials/TurboDocxPartnerApi.credentials.js"
         ],
         "nodes": [
-            "dist/nodes/TurboDocx/TurboDocx.node.js"
+            "dist/nodes/TurboDocx/TurboDocx.node.js",
+            "dist/nodes/TurboDocxTrigger/TurboDocxTrigger.node.js"
         ]
     },
     "devDependencies": {
