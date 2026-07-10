@@ -2,6 +2,7 @@ import { INodeProperties } from 'n8n-workflow';
 
 const QUOTE = ['quote'];
 const LINE_ITEM = ['quoteLineItem'];
+const NUMBER_CONFIG = ['quoteNumberConfig'];
 
 const CURRENCY_OPTIONS = [
 	{ name: 'AUD', value: 'AUD' },
@@ -1082,5 +1083,145 @@ export const quoteLineItemFields: INodeProperties[] = [
 				description: 'Unit price of the line item',
 			},
 		],
+	},
+];
+
+// ===================================================================
+// Quote Number Config — Operations
+// ===================================================================
+// Org-wide singleton (no quoteId): the per-org quote numbering format.
+
+export const quoteNumberConfigOperations: INodeProperties[] = [
+	{
+		displayName: 'Operation',
+		name: 'operation',
+		type: 'options',
+		noDataExpression: true,
+		displayOptions: {
+			show: {
+				resource: NUMBER_CONFIG,
+			},
+		},
+		options: [
+			{
+				name: 'Get',
+				value: 'get',
+				description: 'Get the organization quote number config',
+				action: 'Get the quote number config',
+			},
+			{
+				name: 'Update',
+				value: 'update',
+				description: 'Update the organization quote number config',
+				action: 'Update the quote number config',
+			},
+		],
+		default: 'get',
+	},
+];
+
+// ===================================================================
+// Quote Number Config — Fields
+// ===================================================================
+// All eight format fields are required by the backend, so they are modelled as
+// explicit top-level fields (with sensible defaults) rather than a JSON blob.
+
+export const quoteNumberConfigFields: INodeProperties[] = [
+	{
+		displayName: 'Prefix',
+		name: 'prefix',
+		type: 'string',
+		default: '',
+		description: 'Text prepended to every quote number (e.g. "Q")',
+		displayOptions: {
+			show: { resource: NUMBER_CONFIG, operation: ['update'] },
+		},
+	},
+	{
+		displayName: 'Year Token',
+		name: 'yearToken',
+		type: 'options',
+		options: [
+			{ name: 'Four-Digit Year', value: 'four' },
+			{ name: 'None', value: 'none' },
+			{ name: 'Two-Digit Year', value: 'two' },
+		],
+		default: 'none',
+		description: 'Whether and how a year token is embedded in the quote number',
+		displayOptions: {
+			show: { resource: NUMBER_CONFIG, operation: ['update'] },
+		},
+	},
+	{
+		displayName: 'Month Token',
+		name: 'monthToken',
+		type: 'options',
+		options: [
+			{ name: 'Off', value: 'off' },
+			{ name: 'Two-Digit Month', value: 'two' },
+		],
+		default: 'off',
+		description: 'Whether and how a month token is embedded in the quote number',
+		displayOptions: {
+			show: { resource: NUMBER_CONFIG, operation: ['update'] },
+		},
+	},
+	{
+		displayName: 'Separator',
+		name: 'separator',
+		type: 'string',
+		default: '-',
+		description: 'Separator placed between quote number tokens',
+		displayOptions: {
+			show: { resource: NUMBER_CONFIG, operation: ['update'] },
+		},
+	},
+	{
+		displayName: 'Pad Width',
+		name: 'padWidth',
+		type: 'number',
+		typeOptions: { minValue: 0, maxValue: 12 },
+		default: 4,
+		description: 'Number of digits the sequence is zero-padded to (e.g. 4 → 0001)',
+		displayOptions: {
+			show: { resource: NUMBER_CONFIG, operation: ['update'] },
+		},
+	},
+	{
+		displayName: 'Suffix',
+		name: 'suffix',
+		type: 'string',
+		default: '',
+		description: 'Text appended to every quote number',
+		displayOptions: {
+			show: { resource: NUMBER_CONFIG, operation: ['update'] },
+		},
+	},
+	{
+		displayName: 'Start Number',
+		name: 'startNumber',
+		type: 'number',
+		typeOptions: { minValue: 0 },
+		default: 1,
+		description:
+			'Sequence value the next quote starts from. Cannot be set below the current per-period issued floor.',
+		displayOptions: {
+			show: { resource: NUMBER_CONFIG, operation: ['update'] },
+		},
+	},
+	{
+		displayName: 'Reset Cadence',
+		name: 'resetCadence',
+		type: 'options',
+		options: [
+			{ name: 'Monthly', value: 'monthly' },
+			{ name: 'Never', value: 'never' },
+			{ name: 'Yearly', value: 'yearly' },
+		],
+		default: 'never',
+		description: 'How often the sequence counter resets',
+		displayOptions: {
+			show: { resource: NUMBER_CONFIG, operation: ['update'] },
+		},
 	},
 ];

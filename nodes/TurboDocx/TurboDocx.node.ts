@@ -19,6 +19,8 @@ import {
 	quoteFields,
 	quoteLineItemOperations,
 	quoteLineItemFields,
+	quoteNumberConfigOperations,
+	quoteNumberConfigFields,
 } from './resources/quote/Quote.description';
 import { executeQuote } from './resources/quote/Quote.handler';
 import {
@@ -66,6 +68,7 @@ const STANDARD_RESOURCES = [
 	'deliverable',
 	'quote',
 	'quoteLineItem',
+	'quoteNumberConfig',
 	'product',
 	'priceBook',
 	'bundle',
@@ -111,6 +114,7 @@ const resourceSelector: INodeProperties = {
 		{ name: 'TurboQuote: Product', value: 'product' },
 		{ name: 'TurboQuote: Quote', value: 'quote' },
 		{ name: 'TurboQuote: Quote Line Item', value: 'quoteLineItem' },
+		{ name: 'TurboQuote: Quote Number Config', value: 'quoteNumberConfig' },
 		{ name: 'TurboQuote: Quote Template', value: 'quoteTemplate' },
 		{ name: 'TurboQuote: Quote Type', value: 'quoteType' },
 		{ name: 'TurboSign', value: 'turboSign' },
@@ -169,6 +173,8 @@ export class TurboDocx implements INodeType {
 			...quoteFields,
 			...quoteLineItemOperations,
 			...quoteLineItemFields,
+			...quoteNumberConfigOperations,
+			...quoteNumberConfigFields,
 
 			// Catalog (product / price book / bundle)
 			...productOperations,
@@ -223,7 +229,11 @@ export class TurboDocx implements INodeType {
 					result = await executeTurboSign(this, operation, i);
 				} else if (resource === 'deliverable') {
 					result = await executeDeliverable(this, operation, i);
-				} else if (resource === 'quote' || resource === 'quoteLineItem') {
+				} else if (
+					resource === 'quote' ||
+					resource === 'quoteLineItem' ||
+					resource === 'quoteNumberConfig'
+				) {
 					result = await executeQuote(this, resource, operation, i);
 				} else if (resource === 'product' || resource === 'priceBook' || resource === 'bundle') {
 					result = await executeCatalog(this, resource, operation, i);

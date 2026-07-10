@@ -9,13 +9,13 @@ source of truth for what the node must expose to reach parity.
 
 Legend: ✅ implemented · 🟡 partial · ❌ missing · — not applicable to n8n
 
-Baseline captured at: SDK `@turbodocx/sdk@0.4.0`, node `@turbodocx/n8n-nodes-turbodocx@1.0.2`.
+Baseline captured at: SDK `@turbodocx/sdk@0.4.0`, node `@turbodocx/n8n-nodes-turbodocx@1.2.0`.
 
 ---
 
 ## Summary
 
-| SDK Module | SDK callable methods | Covered in node (v1.0.2) | Gap |
+| SDK Module | SDK callable methods | Covered in node (v1.2.0) | Gap |
 |---|---:|---:|---|
 | TurboSign (`sign.ts`) | 7 | 6 | `getAuditTrail` |
 | Deliverable (`deliverable.ts`) | 7 | 0 | entire module |
@@ -39,7 +39,7 @@ Credential: `turboDocxApi` (apiKey + orgId). Auth headers: `Authorization: Beare
 | `download(documentId)` | GET `/turbosign/documents/{id}/download` | turboSign / `downloadDocument` | ✅ |
 | `void(documentId, reason)` | POST `/turbosign/documents/{id}/void` | turboSign / `voidDocument` | ✅ |
 | `resend(documentId, recipientIds)` | POST `/turbosign/documents/{id}/resend-email` | turboSign / `resendEmail` | ✅ |
-| `getAuditTrail(documentId)` | GET `/turbosign/documents/{id}/audit-trail` | turboSign / `getAuditTrail` | ❌ → **adding** |
+| `getAuditTrail(documentId)` | GET `/turbosign/documents/{id}/audit-trail` | turboSign / `getAuditTrail` | ✅ |
 
 Note: SDK `signUrl` is a response **field** on document objects, not a method — no node operation required.
 
@@ -67,6 +67,28 @@ Envelope quirks: `getDeliverableDetails` unwraps `{ results }`; `generateDeliver
 
 Credential: `turboDocxApi`. Response envelope: double-unwrap `{ data: { result } }` (single) / `{ data: { results } }` (list).
 Several sub-entities → modelled as separate n8n resources for usable UX.
+
+The new `/bulk` and `/number-config` endpoints return a PLURAL `{ results: … }` envelope,
+so those handlers `unwrap: 'smart'` then read `.results` manually (`unwrap: 'result'` only
+unwraps the singular `{ result }` and would miss them).
+
+### Number Config
+| SDK method | HTTP | n8n resource/operation | Status |
+|---|---|---|---|
+| `getQuoteNumberConfig()` | GET `/v1/quotes/number-config` | quoteNumberConfig / `get` | ✅ |
+| `updateQuoteNumberConfig(format)` | PATCH `/v1/quotes/number-config` | quoteNumberConfig / `update` | ✅ |
+
+### Bulk Create
+Each POSTs `{ rows }` and returns a single partial-success `BulkImportResult`
+(`{ imported, failed, adjusted }`) — not a fan-out. Max 500 rows.
+| SDK method | HTTP | n8n resource/operation | Status |
+|---|---|---|---|
+| `bulkCreateProducts(rows)` | POST `/v1/products/bulk` | product / `bulkCreate` | ✅ |
+| `bulkCreatePriceBooks(rows)` | POST `/v1/pricebooks/bulk` | priceBook / `bulkCreate` | ✅ |
+| `bulkCreateBundles(rows)` | POST `/v1/bundles/bulk` | bundle / `bulkCreate` | ✅ |
+| `bulkCreateCompanies(rows)` | POST `/v1/companies/bulk` | company / `bulkCreate` | ✅ |
+| `bulkCreateContacts(rows)` | POST `/v1/contacts/bulk` | contact / `bulkCreate` | ✅ |
+| `bulkCreateTypes(rows)` | POST `/v1/types/bulk` | quoteType / `bulkCreate` | ✅ |
 
 ### Quotes
 | SDK method | HTTP | n8n resource/operation | Status |

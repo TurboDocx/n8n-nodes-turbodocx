@@ -74,6 +74,7 @@ npm install @turbodocx/n8n-nodes-turbodocx
 | **Download Document** | Download the final signed PDF | Archive to cloud storage or send to accounting |
 | **Void Document** | Cancel a signature request and invalidate all links | Deal falls through, need to cancel request |
 | **Resend Email** | Resend signature request to recipients who haven't signed | Send reminders after 3 days |
+| **Get Audit Trail** | Fetch the full signing audit trail for a document | Compliance evidence of who viewed/signed and when |
 
 **Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.)
 
@@ -97,13 +98,14 @@ Full CPQ surface, modelled as several resources for an intuitive UX:
 |----------|-----------|
 | **Quote** | Get Many, Create, Get, Update, Delete, Duplicate, Apply/Remove Price Book, Download PDF, Send, Send With Deliverable, Decline, Void, Handle Expired, **Create and Send** (one-step macro) |
 | **Quote Line Item** | Get Many, Add, Add Bundle, Update, Remove |
-| **Product** | Get Many, Create, Get, Update, Delete, Duplicate, Primary Images (supports binary image upload) |
-| **Price Book** | Get Many, Create, Get, Update, Delete, Duplicate, List Products |
-| **Bundle** | Get Many, Create, Get, Update, Delete, Duplicate |
-| **Company** | Get Many, Create, Get, Update, Delete, List Contacts |
-| **Contact** | Get Many, Create, Update, Delete |
+| **Quote Number Config** | Get, Update (org-wide quote numbering format) |
+| **Product** | Get Many, Bulk Create, Create, Get, Update, Delete, Duplicate, Primary Images (supports binary image upload) |
+| **Price Book** | Get Many, Bulk Create, Create, Get, Update, Delete, Duplicate, List Products |
+| **Bundle** | Get Many, Bulk Create, Create, Get, Update, Delete, Duplicate |
+| **Company** | Get Many, Bulk Create, Create, Get, Update, Delete, List Contacts |
+| **Contact** | Get Many, Bulk Create, Create, Update, Delete |
 | **Quote Template** | Get Many, Get Default, Get, Create, Update, Delete |
-| **Quote Type** | Get Many, Create, Update, Delete |
+| **Quote Type** | Get Many, Bulk Create, Create, Update, Delete |
 
 ### Webhooks
 

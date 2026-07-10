@@ -29,6 +29,12 @@ export const companyOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Bulk Create',
+				value: 'bulkCreate',
+				description: 'Create many companies in one request (partial success)',
+				action: 'Bulk create companies',
+			},
+			{
 				name: 'Create',
 				value: 'create',
 				description: 'Create a company with its initial contacts',
@@ -86,6 +92,25 @@ const companyIdField: INodeProperties = {
 
 export const companyFields: INodeProperties[] = [
 	companyIdField,
+
+	// ===============================
+	// Bulk Create
+	// ===============================
+	{
+		displayName: 'Rows',
+		name: 'rows',
+		type: 'json',
+		required: true,
+		default: '[]',
+		description:
+			'JSON array of companies to create. Each row uses the same shape as Create: name, contacts (array of {name,email,...}), plus optional phone/city/state/country/industryId.',
+		placeholder:
+			'[{"name":"Acme","contacts":[{"name":"Jane Doe","email":"jane@acme.com"}]}]',
+		hint: 'Each row uses the same shape as Create. Max 500 rows; failed rows are reported in the result\'s `failed` array, not thrown.',
+		displayOptions: {
+			show: { resource: COMPANY, operation: ['bulkCreate'] },
+		},
+	},
 
 	// ===============================
 	// Create
@@ -311,6 +336,12 @@ export const contactOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Bulk Create',
+				value: 'bulkCreate',
+				description: 'Create many contacts in one request (partial success)',
+				action: 'Bulk create contacts',
+			},
+			{
 				name: 'Create',
 				value: 'create',
 				description: 'Create a contact under a company',
@@ -356,6 +387,25 @@ const contactIdField: INodeProperties = {
 
 export const contactFields: INodeProperties[] = [
 	contactIdField,
+
+	// ===============================
+	// Bulk Create
+	// ===============================
+	{
+		displayName: 'Rows',
+		name: 'rows',
+		type: 'json',
+		required: true,
+		default: '[]',
+		description:
+			'JSON array of contacts to create. Each row uses the same shape as Create: name, companyId, plus optional email/phone/title.',
+		placeholder:
+			'[{"name":"Jane Doe","companyId":"comp-uuid","email":"jane@acme.com"}]',
+		hint: 'Each row uses the same shape as Create. Max 500 rows; failed rows are reported in the result\'s `failed` array, not thrown.',
+		displayOptions: {
+			show: { resource: CONTACT, operation: ['bulkCreate'] },
+		},
+	},
 
 	// ===============================
 	// Create
@@ -759,6 +809,12 @@ export const quoteTypeOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Bulk Create',
+				value: 'bulkCreate',
+				description: 'Create many quote types in one request (partial success)',
+				action: 'Bulk create quote types',
+			},
+			{
 				name: 'Create',
 				value: 'create',
 				description: 'Create a quote type/category',
@@ -804,6 +860,24 @@ const quoteTypeIdField: INodeProperties = {
 
 export const quoteTypeFields: INodeProperties[] = [
 	quoteTypeIdField,
+
+	// ===============================
+	// Bulk Create
+	// ===============================
+	{
+		displayName: 'Rows',
+		name: 'rows',
+		type: 'json',
+		required: true,
+		default: '[]',
+		description:
+			'JSON array of quote types to create. Each row uses the same shape as Create: name, categoryType (product_category/pricebook_type/company_industry/bundle_category).',
+		placeholder: '[{"name":"Software","categoryType":"product_category"}]',
+		hint: 'Each row uses the same shape as Create. Max 500 rows; failed rows are reported in the result\'s `failed` array, not thrown.',
+		displayOptions: {
+			show: { resource: QUOTE_TYPE, operation: ['bulkCreate'] },
+		},
+	},
 
 	// ===============================
 	// Create

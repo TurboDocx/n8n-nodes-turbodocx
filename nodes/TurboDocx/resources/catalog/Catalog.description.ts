@@ -37,6 +37,12 @@ export const productOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Bulk Create',
+				value: 'bulkCreate',
+				description: 'Create many products in one request (partial success)',
+				action: 'Bulk create products',
+			},
+			{
 				name: 'Create',
 				value: 'create',
 				description: 'Create a product, optionally with images',
@@ -100,6 +106,25 @@ const productIdField: INodeProperties = {
 
 export const productFields: INodeProperties[] = [
 	productIdField,
+
+	// ===============================
+	// Product: Bulk Create
+	// ===============================
+	{
+		displayName: 'Rows',
+		name: 'rows',
+		type: 'json',
+		required: true,
+		default: '[]',
+		description:
+			'JSON array of products to create. Each row uses the same shape as Create: name, listPrice, billingFrequency, categoryId, plus optional sku/description/cost/currency/etc.',
+		placeholder:
+			'[{"name":"Widget","listPrice":100,"billingFrequency":"one-time","categoryId":"cat-uuid"}]',
+		hint: 'Each row uses the same shape as Create. Max 500 rows; failed rows are reported in the result\'s `failed` array, not thrown.',
+		displayOptions: {
+			show: { resource: PRODUCT, operation: ['bulkCreate'] },
+		},
+	},
 
 	// ===============================
 	// Product: Create (required)
@@ -470,6 +495,12 @@ export const priceBookOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Bulk Create',
+				value: 'bulkCreate',
+				description: 'Create many price books in one request (partial success)',
+				action: 'Bulk create price books',
+			},
+			{
 				name: 'Create',
 				value: 'create',
 				description: 'Create a price book',
@@ -533,6 +564,25 @@ const priceBookIdField: INodeProperties = {
 
 export const priceBookFields: INodeProperties[] = [
 	priceBookIdField,
+
+	// ===============================
+	// Price Book: Bulk Create
+	// ===============================
+	{
+		displayName: 'Rows',
+		name: 'rows',
+		type: 'json',
+		required: true,
+		default: '[]',
+		description:
+			'JSON array of price books to create. Each row uses the same shape as Create: name, priceBookTypeId, validFrom, plus optional discountPercent/description/productPricing/etc.',
+		placeholder:
+			'[{"name":"Q1 Pricing","priceBookTypeId":"type-uuid","validFrom":"2026-01-01","discountPercent":10}]',
+		hint: 'Each row uses the same shape as Create. Max 500 rows; failed rows are reported in the result\'s `failed` array, not thrown.',
+		displayOptions: {
+			show: { resource: PRICEBOOK, operation: ['bulkCreate'] },
+		},
+	},
 
 	// ===============================
 	// Price Book: Create (required)
@@ -817,6 +867,12 @@ export const bundleOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Bulk Create',
+				value: 'bulkCreate',
+				description: 'Create many bundles in one request (partial success)',
+				action: 'Bulk create bundles',
+			},
+			{
 				name: 'Create',
 				value: 'create',
 				description: 'Create a bundle',
@@ -874,6 +930,25 @@ const bundleIdField: INodeProperties = {
 
 export const bundleFields: INodeProperties[] = [
 	bundleIdField,
+
+	// ===============================
+	// Bundle: Bulk Create
+	// ===============================
+	{
+		displayName: 'Rows',
+		name: 'rows',
+		type: 'json',
+		required: true,
+		default: '[]',
+		description:
+			'JSON array of bundles to create. Each row uses the same shape as Create: name, categoryId, plus optional items/description/discount/etc.',
+		placeholder:
+			'[{"name":"Starter","categoryId":"cat-uuid","items":[{"productId":"prod-uuid","unitPrice":100,"billingFrequency":"one-time"}]}]',
+		hint: 'Each row uses the same shape as Create. Max 500 rows; failed rows are reported in the result\'s `failed` array, not thrown.',
+		displayOptions: {
+			show: { resource: BUNDLE, operation: ['bulkCreate'] },
+		},
+	},
 
 	// ===============================
 	// Bundle: Create (required)

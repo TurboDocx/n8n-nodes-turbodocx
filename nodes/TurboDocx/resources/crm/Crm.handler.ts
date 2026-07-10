@@ -35,11 +35,40 @@ function applyScalar(body: IDataObject, src: IDataObject, key: string): void {
 	if (src[key] !== undefined && src[key] !== '') body[key] = src[key];
 }
 
+/**
+ * Shared handler for a `/bulk` create endpoint. Parses the `rows` JSON param,
+ * POSTs `{ rows }`, and returns the single BulkImportResult summary object.
+ * The bulk endpoints return a PLURAL `{ results: BulkImportResult }` envelope,
+ * so we unwrap 'smart' and read `.results` manually (not a fan-out).
+ */
+async function bulkCreate(
+	ctx: IExecuteFunctions,
+	i: number,
+	endpoint: string,
+): Promise<INodeExecutionData[]> {
+	const rows = parseJsonParameter(
+		ctx,
+		ctx.getNodeParameter('rows', i, '[]') as string,
+		'rows',
+		i,
+	) as IDataObject[];
+	const body = await turboDocxApiRequest(
+		ctx,
+		{ method: 'POST', endpoint, body: { rows }, unwrap: 'smart' },
+		i,
+	);
+	return [{ json: (body.results as IDataObject) ?? body }];
+}
+
 async function executeCompany(
 	ctx: IExecuteFunctions,
 	operation: string,
 	i: number,
 ): Promise<INodeExecutionData[]> {
+	if (operation === 'bulkCreate') {
+		return bulkCreate(ctx, i, '/v1/companies/bulk');
+	}
+
 	if (operation === 'create') {
 		const name = ctx.getNodeParameter('name', i) as string;
 		const contacts = parseJsonParameter(
@@ -138,6 +167,10 @@ async function executeContact(
 	operation: string,
 	i: number,
 ): Promise<INodeExecutionData[]> {
+	if (operation === 'bulkCreate') {
+		return bulkCreate(ctx, i, '/v1/contacts/bulk');
+	}
+
 	if (operation === 'create') {
 		const name = ctx.getNodeParameter('name', i) as string;
 		const companyId = ctx.getNodeParameter('companyId', i) as string;
@@ -293,6 +326,10 @@ async function executeQuoteType(
 	operation: string,
 	i: number,
 ): Promise<INodeExecutionData[]> {
+	if (operation === 'bulkCreate') {
+		return bulkCreate(ctx, i, '/v1/types/bulk');
+	}
+
 	if (operation === 'create') {
 		const name = ctx.getNodeParameter('name', i) as string;
 		const categoryType = ctx.getNodeParameter('categoryType', i) as string;

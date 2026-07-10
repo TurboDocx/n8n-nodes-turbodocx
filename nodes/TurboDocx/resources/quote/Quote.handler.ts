@@ -458,6 +458,48 @@ async function executeQuoteLineItemResource(
 }
 
 // ===================================================================
+// Quote Number Config resource (org-wide singleton, no quoteId)
+// ===================================================================
+
+async function executeQuoteNumberConfigResource(
+	ctx: IExecuteFunctions,
+	operation: string,
+	i: number,
+): Promise<INodeExecutionData[]> {
+	// The /number-config endpoints return a PLURAL `{ results: ... }` envelope,
+	// so unwrap 'smart' and read `.results` manually (unwrap 'result' would miss it).
+	if (operation === 'get') {
+		const body = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint: '/v1/quotes/number-config', unwrap: 'smart' },
+			i,
+		);
+		return [{ json: (body.results as IDataObject) ?? body }];
+	}
+
+	if (operation === 'update') {
+		const requestBody: IDataObject = {
+			prefix: ctx.getNodeParameter('prefix', i, '') as string,
+			yearToken: ctx.getNodeParameter('yearToken', i, 'none') as string,
+			monthToken: ctx.getNodeParameter('monthToken', i, 'off') as string,
+			separator: ctx.getNodeParameter('separator', i, '-') as string,
+			padWidth: ctx.getNodeParameter('padWidth', i, 4) as number,
+			suffix: ctx.getNodeParameter('suffix', i, '') as string,
+			startNumber: ctx.getNodeParameter('startNumber', i, 1) as number,
+			resetCadence: ctx.getNodeParameter('resetCadence', i, 'never') as string,
+		};
+		const body = await turboDocxApiRequest(
+			ctx,
+			{ method: 'PATCH', endpoint: '/v1/quotes/number-config', body: requestBody, unwrap: 'smart' },
+			i,
+		);
+		return [{ json: (body.results as IDataObject) ?? body }];
+	}
+
+	throw new NodeOperationError(ctx.getNode(), `Unknown Quote Number Config operation: ${operation}`, { itemIndex: i });
+}
+
+// ===================================================================
 // Entry point
 // ===================================================================
 
@@ -469,6 +511,9 @@ export async function executeQuote(
 ): Promise<INodeExecutionData[]> {
 	if (resource === 'quoteLineItem') {
 		return executeQuoteLineItemResource(ctx, operation, i);
+	}
+	if (resource === 'quoteNumberConfig') {
+		return executeQuoteNumberConfigResource(ctx, operation, i);
 	}
 	return executeQuoteResource(ctx, operation, i);
 }

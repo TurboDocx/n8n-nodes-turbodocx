@@ -59,6 +59,31 @@ async function paginateList(
 	return records.map((r) => ({ json: r }));
 }
 
+/**
+ * Shared handler for a `/bulk` create endpoint. Parses the `rows` JSON param,
+ * POSTs `{ rows }`, and returns the single BulkImportResult summary object.
+ * The bulk endpoints return a PLURAL `{ results: BulkImportResult }` envelope,
+ * so we unwrap 'smart' and read `.results` manually (not a fan-out).
+ */
+async function bulkCreate(
+	ctx: IExecuteFunctions,
+	i: number,
+	endpoint: string,
+): Promise<INodeExecutionData[]> {
+	const rows = parseJsonParameter(
+		ctx,
+		ctx.getNodeParameter('rows', i, '[]') as string,
+		'rows',
+		i,
+	) as IDataObject[];
+	const body = await turboDocxApiRequest(
+		ctx,
+		{ method: 'POST', endpoint, body: { rows }, unwrap: 'smart' },
+		i,
+	);
+	return [{ json: (body.results as IDataObject) ?? body }];
+}
+
 // =====================================================================================
 // PRODUCT
 // =====================================================================================
@@ -77,6 +102,10 @@ async function executeProduct(
 		if (filters.showInCatalog !== undefined) baseQs.showInCatalog = filters.showInCatalog;
 		if (filters.categoryIds) baseQs.categoryIds = splitCsv(filters.categoryIds as string);
 		return paginateList(ctx, i, '/v1/products', baseQs);
+	}
+
+	if (operation === 'bulkCreate') {
+		return bulkCreate(ctx, i, '/v1/products/bulk');
 	}
 
 	if (operation === 'get') {
@@ -281,6 +310,10 @@ async function executePriceBook(
 		return paginateList(ctx, i, `/v1/pricebooks/${priceBookId}/products`, baseQs);
 	}
 
+	if (operation === 'bulkCreate') {
+		return bulkCreate(ctx, i, '/v1/pricebooks/bulk');
+	}
+
 	if (operation === 'get') {
 		const priceBookId = ctx.getNodeParameter('priceBookId', i) as string;
 		const result = await turboDocxApiRequest(
@@ -412,6 +445,10 @@ async function executeBundle(
 		if (filters.showInCatalog !== undefined) baseQs.showInCatalog = filters.showInCatalog;
 		if (filters.categoryIds) baseQs.categoryIds = splitCsv(filters.categoryIds as string);
 		return paginateList(ctx, i, '/v1/bundles', baseQs);
+	}
+
+	if (operation === 'bulkCreate') {
+		return bulkCreate(ctx, i, '/v1/bundles/bulk');
 	}
 
 	if (operation === 'get') {
