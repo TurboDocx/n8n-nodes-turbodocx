@@ -44,10 +44,17 @@ export async function executeWebhook(
 	if (operation === 'update') {
 		const updateFields = ctx.getNodeParameter('updateFields', i, {}) as IDataObject;
 		const body: IDataObject = {};
+
+		// The backend requires `.min(1)` on both arrays, so an EMPTY one is a 400 rather than a
+		// no-op. Adding the field in the UI and leaving it untouched yields `[]` — omit that
+		// instead of forwarding it, so an untouched field means "don't change this".
 		if (updateFields.urls !== undefined && updateFields.urls !== '') {
-			body.urls = parseJsonParameter(ctx, updateFields.urls as string, 'urls', i) as string[];
+			const urls = parseJsonParameter(ctx, updateFields.urls as string, 'urls', i) as string[];
+			if (Array.isArray(urls) && urls.length > 0) body.urls = urls;
 		}
-		if (updateFields.events !== undefined) body.events = updateFields.events as string[];
+		if (Array.isArray(updateFields.events) && updateFields.events.length > 0) {
+			body.events = updateFields.events as string[];
+		}
 		if (updateFields.isActive !== undefined) body.isActive = updateFields.isActive;
 
 		const result = await turboDocxApiRequest(

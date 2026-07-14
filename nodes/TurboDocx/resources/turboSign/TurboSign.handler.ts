@@ -1,7 +1,7 @@
 import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError } from 'n8n-workflow';
 import {
 	turboDocxApiRequest,
-	turboDocxApiRequestBinary,
+	fetchPresignedUrl,
 	parseJsonParameter,
 } from '../../shared/GenericFunctions';
 
@@ -101,7 +101,7 @@ export async function executeTurboSign(
 		const documentId = ctx.getNodeParameter('documentId', i) as string;
 		const result = await turboDocxApiRequest(
 			ctx,
-			{ method: 'GET', endpoint: `/turbosign/documents/${documentId}/status` },
+			{ method: 'GET', endpoint: `/turbosign/documents/${documentId}/status`, unwrap: 'smart' },
 			i,
 		);
 		return [{ json: result }];
@@ -109,19 +109,36 @@ export async function executeTurboSign(
 
 	if (operation === 'downloadDocument') {
 		const documentId = ctx.getNodeParameter('documentId', i) as string;
-		const buffer = await turboDocxApiRequestBinary(
+
+		// Two-step download. This endpoint does NOT stream the PDF — it returns
+		// `{ downloadUrl, fileName }` where downloadUrl is a short-lived presigned S3
+		// link. Reading it as a buffer would hand back the JSON bytes mislabelled as a
+		// PDF, producing a file that downloads but never opens.
+		const meta = await turboDocxApiRequest(
 			ctx,
 			{ method: 'GET', endpoint: `/turbosign/documents/${documentId}/download` },
 			i,
 		);
+
+		const downloadUrl = meta.downloadUrl as string | undefined;
+		if (!downloadUrl) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`TurboSign did not return a download URL for document ${documentId}. A document can only be downloaded once it is completed.`,
+				{ itemIndex: i },
+			);
+		}
+
+		const buffer = await fetchPresignedUrl(ctx, downloadUrl, i);
+		const fileName = (meta.fileName as string) || `signed-document-${documentId}.pdf`;
 		const binaryData = await ctx.helpers.prepareBinaryData(
 			buffer,
-			`signed-document-${documentId}.pdf`,
+			fileName,
 			'application/pdf',
 		);
 		return [
 			{
-				json: { documentId },
+				json: { documentId, fileName },
 				binary: { data: binaryData },
 			},
 		];
@@ -136,6 +153,7 @@ export async function executeTurboSign(
 				method: 'POST',
 				endpoint: `/turbosign/documents/${documentId}/void`,
 				body: { reason: voidReason },
+				unwrap: 'smart',
 			},
 			i,
 		);
@@ -152,6 +170,7 @@ export async function executeTurboSign(
 				method: 'POST',
 				endpoint: `/turbosign/documents/${documentId}/resend-email`,
 				body: { recipientIds: parsedRecipientIds as string[] },
+				unwrap: 'smart',
 			},
 			i,
 		);
@@ -162,7 +181,7 @@ export async function executeTurboSign(
 		const documentId = ctx.getNodeParameter('documentId', i) as string;
 		const result = await turboDocxApiRequest(
 			ctx,
-			{ method: 'GET', endpoint: `/turbosign/documents/${documentId}/audit-trail` },
+			{ method: 'GET', endpoint: `/turbosign/documents/${documentId}/audit-trail`, unwrap: 'smart' },
 			i,
 		);
 		return [{ json: result }];

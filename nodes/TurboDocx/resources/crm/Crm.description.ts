@@ -583,13 +583,15 @@ export const quoteTemplateOperations: INodeProperties[] = [
 			{
 				name: 'Create',
 				value: 'create',
-				description: 'Create a quote template',
+				description:
+					'Create the organization\'s quote template. An org has at most one, and it is auto-provisioned from the org\'s branding the first time the template is read — so on any established org this returns 400 TEMPLATE_ALREADY_EXISTS. Use Update instead.',
 				action: 'Create a quote template',
 			},
 			{
 				name: 'Delete',
 				value: 'delete',
-				description: 'Delete a quote template',
+				description:
+					"Reset the organization's quote template to its branding defaults. The template is soft-deleted, and the next read regenerates one from the org's branding — so this does not leave the org without a template. Any customization (colors, disclaimer, terms, closing message, sender details) is permanently lost and cannot be recovered.",
 				action: 'Delete a quote template',
 			},
 			{
@@ -601,7 +603,8 @@ export const quoteTemplateOperations: INodeProperties[] = [
 			{
 				name: 'Get Default',
 				value: 'getDefault',
-				description: "Get the organization's default quote template",
+				description:
+					"Get the organization's quote template. If the org has none, one is auto-created from its branding — so this operation can have the side effect of provisioning the template.",
 				action: 'Get the default quote template',
 			},
 			{

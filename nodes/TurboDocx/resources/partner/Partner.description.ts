@@ -170,8 +170,13 @@ export const partnerOrganizationFields: INodeProperties[] = [
 		name: 'tracking',
 		type: 'json',
 		default: '{}',
+		// These are the columns of the backend's Tracking table (usage counters), which the
+		// entitlements endpoint patches directly. Requires the backend fix that corrected its
+		// Joi schema — it previously accepted only maxUsers/maxStorage/maxAPIKeys, which are
+		// Features columns (maxAPIKeys exists nowhere), making the field unusable: a real key
+		// 400'd on validation, an "accepted" key 500'd on the patch.
 		description:
-			'JSON object of usage tracking counters to update. Keys: numUsers, numProjectspaces, numTemplates, storageUsed, numGeneratedDeliverables, numSignaturesUsed, currentAICredits.',
+			'JSON object of usage tracking counters to update. Keys: numUsers, numProjectspaces, numTemplates, storageUsed (bytes), numGeneratedDeliverables, numSignaturesUsed, numQuotesSent, currentAICredits.',
 		placeholder: '{"numUsers":12,"storageUsed":5368709120}',
 		displayOptions: { show: { resource: ORG, operation: ['updateEntitlements'] } },
 	},
@@ -422,12 +427,15 @@ export const partnerOrgApiKeyFields: INodeProperties[] = [
 		displayOptions: { show: { resource: ORG_API_KEY, operation: ['create'] } },
 	},
 	{
+		// The backend validates this against the same four-value enum as an org user's role,
+		// so a free-text field just let typos ("Admin") through to a 400.
 		displayName: 'Role',
 		name: 'role',
-		type: 'string',
+		type: 'options',
+		options: ORG_USER_ROLE_OPTIONS,
 		required: true,
-		default: '',
-		description: 'Role assigned to the API key (e.g. admin, contributor)',
+		default: 'contributor',
+		description: 'Role assigned to the API key',
 		displayOptions: { show: { resource: ORG_API_KEY, operation: ['create'] } },
 	},
 
@@ -450,8 +458,9 @@ export const partnerOrgApiKeyFields: INodeProperties[] = [
 			{
 				displayName: 'Role',
 				name: 'role',
-				type: 'string',
-				default: '',
+				type: 'options',
+				options: ORG_USER_ROLE_OPTIONS,
+				default: 'contributor',
 				description: 'Updated role for the API key',
 			},
 		],
@@ -765,9 +774,13 @@ export const partnerUserFields: INodeProperties[] = [
 				displayName: 'Permissions',
 				name: 'permissions',
 				type: 'json',
-				default: '{}',
+				// All-or-nothing: the backend marks every one of the seven booleans `.required()`
+				// inside this object, so a partial patch like `{"canViewAuditLogs":false}` 400s.
+				// Defaulting to the full object means the field is usable as-is — edit the flags
+				// you want and leave the rest.
+				default: PERMISSIONS_PLACEHOLDER,
 				description:
-					'JSON object of partner permissions to update. Only included keys are changed.',
+					'Complete JSON object of partner permissions. All seven keys are required — a partial object is rejected. Edit the flags you want to change and leave the others as they are.',
 				placeholder: PERMISSIONS_PLACEHOLDER,
 				hint: PERMISSIONS_HINT,
 			},

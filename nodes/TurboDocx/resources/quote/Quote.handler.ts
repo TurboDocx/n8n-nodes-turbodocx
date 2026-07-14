@@ -50,12 +50,17 @@ async function executeQuoteResource(
 
 	if (operation === 'get') {
 		const quoteId = ctx.getNodeParameter('quoteId', i) as string;
-		const result = await turboDocxApiRequest(
+		// This endpoint returns `{ result, statusInfo }` — `statusInfo` is a SIBLING of
+		// `result`, so unwrap: 'result' would drop the expiry/derived-status flags entirely.
+		// Unwrap the `{ data }` layer only, then merge, mirroring the SDK's getQuote.
+		const body = await turboDocxApiRequest(
 			ctx,
-			{ method: 'GET', endpoint: `/v1/quotes/${quoteId}`, unwrap: 'result' },
+			{ method: 'GET', endpoint: `/v1/quotes/${quoteId}`, unwrap: 'smart' },
 			i,
 		);
-		return [{ json: result }];
+		const quote = (body.result as IDataObject) ?? body;
+		if (body.statusInfo !== undefined) quote.statusInfo = body.statusInfo;
+		return [{ json: quote }];
 	}
 
 	if (operation === 'list') {
@@ -87,8 +92,24 @@ async function executeQuoteResource(
 		if (updateFields.termDays !== undefined) body.termDays = updateFields.termDays;
 
 		// Nullable fields: explicit clear toggles send null; otherwise include only when set.
+		//
+		// renewalPeriod is conditional on termDays: the backend accepts it only when termDays
+		// is -1 (auto-renewal) and demands `null` otherwise, so sending one without the other
+		// is a 400. Unlike create — which quietly drops it, because both fields carry defaults
+		// and can end up set without the user meaning it — an update names the field explicitly,
+		// so we say why instead of silently doing nothing. The old code sent it regardless and
+		// simply 400'd, so this replaces an opaque failure rather than breaking a working path.
 		if (updateFields.clearRenewalPeriod === true) body.renewalPeriod = null;
-		else if (updateFields.renewalPeriod) body.renewalPeriod = updateFields.renewalPeriod;
+		else if (updateFields.renewalPeriod) {
+			if (updateFields.termDays !== -1) {
+				throw new NodeOperationError(
+					ctx.getNode(),
+					'Renewal Period only applies to auto-renewing quotes. Add Term Days to Update Fields and set it to -1, or remove Renewal Period.\n\nHTTP Status: 400',
+					{ itemIndex: i },
+				);
+			}
+			body.renewalPeriod = updateFields.renewalPeriod;
+		}
 
 		if (updateFields.clearValidUntil === true) body.validUntil = null;
 		else if (updateFields.validUntil) body.validUntil = updateFields.validUntil;

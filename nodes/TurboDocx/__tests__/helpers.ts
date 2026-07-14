@@ -7,6 +7,8 @@ export interface MockExecuteOptions {
 	params: Record<string, unknown>;
 	/** Implementation for httpRequestWithAuthentication. */
 	http: jest.Mock;
+	/** Implementation for the UNauthenticated httpRequest (presigned-URL downloads). */
+	httpUnauthenticated?: jest.Mock;
 	/** continueOnFail() return value. */
 	continueOnFail?: boolean;
 }
@@ -27,6 +29,12 @@ export function makeExecuteCtx(opts: MockExecuteOptions): IExecuteFunctions {
 			name in opts.params ? opts.params[name] : fallback,
 		helpers: {
 			httpRequestWithAuthentication: opts.http,
+			// Multipart uploads (TurboSign prepare-*, product images) go through the legacy
+			// helper instead. Same (ctx, credentialName, options) signature, so it shares the mock.
+			requestWithAuthentication: opts.http,
+			httpRequest: opts.httpUnauthenticated ?? jest.fn(),
+			assertBinaryData: () => ({ fileName: 'document.pdf', mimeType: 'application/pdf' }),
+			getBinaryDataBuffer: async () => Buffer.from('%PDF-1.7 test'),
 			prepareBinaryData: async (buffer: Buffer, fileName: string, mimeType: string) => ({
 				data: buffer.toString('base64'),
 				fileName,

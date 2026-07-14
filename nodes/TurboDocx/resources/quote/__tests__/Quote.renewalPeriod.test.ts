@@ -36,3 +36,52 @@ describe('Quote create renewalPeriod / termDays coupling', () => {
 		expect(capture.body).toMatchObject({ termDays: -1, renewalPeriod: 'annually' });
 	});
 });
+
+/**
+ * The same coupling applies on PATCH — `joiUpdateQuoteSchema` (RapidDocxBackend
+ * src/models/TurboQuoteHeader/ITurboQuoteHeader.ts) declares
+ * `renewalPeriod: Joi.when('termDays', { is: -1, then: required, otherwise: valid(null) })`.
+ * An absent termDays takes the `otherwise` branch, so a lone renewalPeriod is rejected with
+ * `"renewalPeriod" must be [null]`. Update used to send it anyway and just 400.
+ */
+function captureUpdate(updateFields: Record<string, unknown>) {
+	const capture: { body?: Record<string, unknown> } = {};
+	const http = jest.fn(async (_cred: string, opts: { body?: Record<string, unknown> }) => {
+		capture.body = opts.body;
+		return okResponse({ result: { id: 'q1' } });
+	});
+	const ctx = makeExecuteCtx({
+		itemCount: 1,
+		params: { resource: 'quote', operation: 'update', quoteId: 'q1', updateFields },
+		http,
+	});
+	return { ctx, capture };
+}
+
+describe('Quote update renewalPeriod / termDays coupling', () => {
+	it('rejects a renewal period without an auto-renewal term, with an actionable message', async () => {
+		const { ctx } = captureUpdate({ renewalPeriod: 'monthly' });
+		await expect(TurboDocx.prototype.execute.call(ctx)).rejects.toThrow(
+			/only applies to auto-renewing quotes/i,
+		);
+	});
+
+	it('rejects a renewal period alongside a fixed term', async () => {
+		const { ctx } = captureUpdate({ termDays: 30, renewalPeriod: 'monthly' });
+		await expect(TurboDocx.prototype.execute.call(ctx)).rejects.toThrow(
+			/only applies to auto-renewing quotes/i,
+		);
+	});
+
+	it('sends renewalPeriod when termDays is -1', async () => {
+		const { ctx, capture } = captureUpdate({ termDays: -1, renewalPeriod: 'quarterly' });
+		await TurboDocx.prototype.execute.call(ctx);
+		expect(capture.body).toMatchObject({ termDays: -1, renewalPeriod: 'quarterly' });
+	});
+
+	it('still allows clearing the renewal period outright', async () => {
+		const { ctx, capture } = captureUpdate({ clearRenewalPeriod: true });
+		await TurboDocx.prototype.execute.call(ctx);
+		expect(capture.body).toMatchObject({ renewalPeriod: null });
+	});
+});

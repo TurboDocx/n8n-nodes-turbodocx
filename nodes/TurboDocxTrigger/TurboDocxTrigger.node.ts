@@ -231,11 +231,16 @@ export class TurboDocxTrigger implements INodeType {
 						// We created it and we're the last URL: remove the webhook.
 						await apiRequest(this, 'DELETE', `/api/webhooks/${WEBHOOK_NAME}`);
 					} else {
-						// Shared webhook we only attached to, now with no receivers: leave it in
-						// place (other consumers may re-add URLs) but deactivate it so it isn't
-						// an active webhook with zero URLs.
+						// A webhook we only attached to, and our URL was its only one — which happens
+						// when this node's static data was lost (workflow re-imported/copied) so we no
+						// longer know we created it.
+						//
+						// We CANNOT send `urls: []`: the backend's update schema keeps `.min(1)` on the
+						// array even though the field is optional, so an empty array is a 400 ("At least
+						// one webhook URL is required") and the deregistration would silently no-op,
+						// leaving the org webhook firing at a dead n8n URL. Deactivate instead and leave
+						// the (now-stale) URL in place — a subsequent activation re-points and re-enables it.
 						await apiRequest(this, 'PATCH', `/api/webhooks/${WEBHOOK_NAME}`, {
-							urls,
 							isActive: false,
 						});
 					}

@@ -20,6 +20,9 @@ function splitCsv(value: string): string[] {
 		.filter((s) => s.length > 0);
 }
 
+/** Multer on the product routes accepts at most this many `images` parts. */
+const MAX_PRODUCT_IMAGES = 5;
+
 /**
  * Read the named binary properties off the current input item and turn each into
  * an n8n multipart file part, with type detected from the file's magic bytes.
@@ -29,6 +32,16 @@ async function collectImageParts(
 	i: number,
 	binaryPropertyNames: string[],
 ): Promise<IFilePart[]> {
+	// Fail here with a message that names the limit, rather than letting the backend's
+	// multer reject the upload with an opaque LIMIT_UNEXPECTED_FILE error.
+	if (binaryPropertyNames.length > MAX_PRODUCT_IMAGES) {
+		throw new NodeOperationError(
+			ctx.getNode(),
+			`Too many images: ${binaryPropertyNames.length} binary properties given, but a product accepts at most ${MAX_PRODUCT_IMAGES}`,
+			{ itemIndex: i },
+		);
+	}
+
 	const parts: IFilePart[] = [];
 	for (const propName of binaryPropertyNames) {
 		const binaryMeta = ctx.helpers.assertBinaryData(i, propName);

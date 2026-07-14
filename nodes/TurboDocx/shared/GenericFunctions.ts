@@ -329,6 +329,39 @@ export async function turboDocxApiRequestBinary(
 }
 
 /**
+ * Fetch a presigned storage URL and return the bytes.
+ *
+ * Deliberately UNauthenticated: the signature is already carried in the URL's query
+ * string, and S3 rejects a request that also sends an `Authorization` header
+ * ("Only one auth mechanism allowed"). Mirrors the SDK, which does a bare `fetch`
+ * on the download URL rather than routing it through its HTTP client.
+ */
+export async function fetchPresignedUrl(
+	ctx: IExecuteFunctions,
+	url: string,
+	itemIndex = 0,
+): Promise<Buffer> {
+	const response = (await ctx.helpers.httpRequest({
+		method: 'GET',
+		url,
+		encoding: 'arraybuffer',
+		json: false,
+		ignoreHttpStatusErrors: true,
+		returnFullResponse: true,
+	})) as FullResponse;
+
+	if (response.statusCode >= 400) {
+		throw new NodeOperationError(
+			ctx.getNode(),
+			buildApiErrorMessage(response.body, response.statusCode),
+			{ itemIndex },
+		);
+	}
+
+	return response.body as Buffer;
+}
+
+/**
  * Translate an unexpected thrown error (network failure, n8n-wrapped API error)
  * into a NodeOperationError with the best message we can extract. Mirrors the
  * original monolith's outer-catch behaviour so error output stays stable.
