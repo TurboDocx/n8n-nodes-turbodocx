@@ -95,17 +95,49 @@ export class TurboDocxTrigger implements INodeType {
 				type: 'multiOptions',
 				required: true,
 				default: ['signature.document.completed'],
-				description: 'The signature events to subscribe to',
+				description:
+					'The signature events to subscribe to. Note that "Document Signed" is partial-progress only — it never fires on the final signature. Use "Document Completed" to detect that the whole document is done.',
+				// n8n requires multiOptions to be alphabetized by name, so this list is NOT in
+				// lifecycle order. The lifecycle is: sent -> viewed -> recipient_signed (per signer)
+				// -> signed (only while signers remain) -> completed | finalization_failed, or voided.
 				options: [
 					{
 						name: 'Document Completed',
 						value: 'signature.document.completed',
-						description: 'All recipients have signed the document',
+						description: 'All recipients have signed and the signed PDF is finalized',
+					},
+					{
+						name: 'Document Finalization Failed',
+						value: 'signature.document.finalization_failed',
+						description:
+							'The signed PDF failed to finalize (e.g. a signing error). The document is NOT completed.',
+					},
+					{
+						name: 'Document Recipient Signed',
+						value: 'signature.document.recipient_signed',
+						description:
+							'An individual signer completes their signature. Fires once per signer, and carries isFinalSigner.',
+					},
+					{
+						name: 'Document Sent',
+						value: 'signature.document.sent',
+						description: 'The document is dispatched to recipients',
+					},
+					{
+						name: 'Document Signed',
+						value: 'signature.document.signed',
+						description:
+							'A signer signs but the document is not yet complete. Never fires on the final signature, and a single-signer document never emits it at all.',
+					},
+					{
+						name: 'Document Viewed',
+						value: 'signature.document.viewed',
+						description: 'A recipient opens the document for the first time',
 					},
 					{
 						name: 'Document Voided',
 						value: 'signature.document.voided',
-						description: 'The signature request was cancelled',
+						description: 'The document is voided or cancelled',
 					},
 				],
 			},

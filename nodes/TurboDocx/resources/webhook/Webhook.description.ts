@@ -79,15 +79,52 @@ export const webhookOperations: INodeProperties[] = [
 	},
 ];
 
-/** Known subscribable signature events. */
+/**
+ * The subscribable signature events, in lifecycle order.
+ *
+ * `recipientSigned`, `signed` and `completed` are easy to confuse:
+ * `recipient_signed` fires once PER SIGNER (and carries isFinalSigner), while `signed` is a
+ * document-level partial-progress event that fires ONLY when signers still remain. So `signed`
+ * never fires on the final signature, and a single-signer document never emits it at all.
+ * To detect "the document is done", subscribe to `completed`, not `signed`.
+ */
 const EVENT_OPTIONS = [
+	{
+		name: 'Signature Document Sent',
+		value: 'signature.document.sent',
+		description: 'The document is dispatched to recipients',
+	},
+	{
+		name: 'Signature Document Viewed',
+		value: 'signature.document.viewed',
+		description: 'A recipient opens the document for the first time',
+	},
+	{
+		name: 'Signature Document Recipient Signed',
+		value: 'signature.document.recipient_signed',
+		description: 'An individual signer completes their signature. Fires once per signer.',
+	},
+	{
+		name: 'Signature Document Signed',
+		value: 'signature.document.signed',
+		description:
+			'A signer signs but the document is not yet complete. Never fires on the final signature.',
+	},
 	{
 		name: 'Signature Document Completed',
 		value: 'signature.document.completed',
+		description: 'All recipients have signed and the signed PDF is finalized',
+	},
+	{
+		name: 'Signature Document Finalization Failed',
+		value: 'signature.document.finalization_failed',
+		description:
+			'The signed PDF failed to finalize (e.g. a signing error). The document is NOT completed.',
 	},
 	{
 		name: 'Signature Document Voided',
 		value: 'signature.document.voided',
+		description: 'The document is voided or cancelled',
 	},
 ];
 
