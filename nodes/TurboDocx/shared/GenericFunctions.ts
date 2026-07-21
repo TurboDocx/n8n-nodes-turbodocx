@@ -7,6 +7,12 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
+import { resolveClientContextHeaders } from './clientContext';
+
+// Device/location headers for the TurboSign audit trail, describing the n8n host. Computed
+// once — the host environment is stable for the lifetime of the process.
+const CLIENT_CONTEXT_HEADERS = resolveClientContextHeaders();
+
 /**
  * Shared TurboDocx request layer.
  *
@@ -29,17 +35,81 @@ interface FullResponse {
 }
 
 /**
+ * n8n's NodeError rewrites any message CONTAINING one of these tokens into a generic
+ * connection/filesystem message (COMMON_ERRORS in n8n-workflow's node.error). A CamelCase
+ * backend code can collide by accident — "TemplateNotFound" upper-cases to
+ * "TEMPLAT|ENOTFOUND" — which would swallow the real message. Such codes are left off the
+ * message rather than destroying it.
+ */
+const N8N_MANGLED_TOKENS = [
+	'ECONNREFUSED',
+	'ECONNRESET',
+	'ENOTFOUND',
+	'ETIMEDOUT',
+	'ERRADDRINUSE',
+	'EADDRNOTAVAIL',
+	'ECONNABORTED',
+	'EHOSTUNREACH',
+	'EAI_AGAIN',
+	'ENOENT',
+	'EISDIR',
+	'ENOTDIR',
+	'EACCES',
+	'EEXIST',
+	'EPERM',
+	'GETADDRINFO',
+];
+
+/** Render ` [Code]` for display, unless the code would be mangled by n8n (see above). */
+function formatErrorCode(code: string): string {
+	if (!code) return '';
+	const upper = code.toUpperCase();
+	if (N8N_MANGLED_TOKENS.some((token) => upper.includes(token))) return '';
+	return ` [${code}]`;
+}
+
+/**
+ * The backend's domain `ValidationError` serialises as `{ message, error: "<Code>", data }`
+ * (ValidationErrorHandler / the TurboQuote routes) — the machine code lives in `error` as a
+ * STRING beside a human `message`, not in `type`/`code`. Pull it out so codes like
+ * `QuoteHasNoLineItems` or `SenderEmailRequired` reach the user. Only when a `message` is
+ * present: with `{ error: "Forbidden" }` alone the string IS the message.
+ */
+function stringErrorCode(obj: Record<string, unknown> | null | undefined): string {
+	if (!obj) return '';
+	if (typeof obj.message !== 'string' || !obj.message) return '';
+	return typeof obj.error === 'string' ? obj.error : '';
+}
+
+/**
  * Build a human-friendly error message from a TurboDocx API error body.
- * Handles the three shapes the API emits:
+ * Handles the four shapes the API emits:
  *   1. { data: { errors: [{ path, message }] } }  (Celebrate/Joi validation)
  *   2. { error: "..." }                            (simple string)
  *   3. { message: "...", type: "..." }             (standard format)
+ *   4. { message: "...", error: "<Code>", data }   (domain ValidationError)
  */
-export function buildApiErrorMessage(
+/** The parsed pieces of an API error, before they are rendered for display. */
+export interface ApiErrorParts {
+	/** The actionable reason, with the machine code appended when it is safe to show. */
+	message: string;
+	/** The machine-readable code (e.g. `QuoteHasNoLineItems`), or '' when the API sent none. */
+	code: string;
+	statusCode: number;
+}
+
+/**
+ * Parse an API error body into its parts.
+ *
+ * Kept separate from the display string so `continueOnFail` output can carry `code` and
+ * `statusCode` as real fields — a workflow branching on `QuoteHasNoLineItems` should use an
+ * IF node on `code`, not substring-match a blob.
+ */
+export function buildApiError(
 	rawBody: unknown,
 	statusCode: number,
 	includePath = false,
-): string {
+): ApiErrorParts {
 	let errorBody: unknown = rawBody;
 
 	if (Buffer.isBuffer(errorBody)) {
@@ -66,7 +136,11 @@ export function buildApiErrorMessage(
 
 	let errorMessage = 'Request failed';
 	const errorCode = obj
-		? ((obj.type as string) || (obj.code as string) || (nestedError?.code as string) || '')
+		? ((obj.type as string) ||
+			(obj.code as string) ||
+			(nestedError?.code as string) ||
+			stringErrorCode(obj) ||
+			'')
 		: '';
 
 	if (
@@ -98,7 +172,54 @@ export function buildApiErrorMessage(
 		errorMessage = errorBody;
 	}
 
-	return `${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${statusCode}`;
+	return {
+		message: `${errorMessage}${formatErrorCode(errorCode)}`,
+		code: errorCode,
+		statusCode,
+	};
+}
+
+/**
+ * Display string for an API error: the actionable reason plus the HTTP status.
+ *
+ * Retained for callers that only need a string. Prefer `buildApiError` where the structured
+ * code/status are useful.
+ */
+export function buildApiErrorMessage(
+	rawBody: unknown,
+	statusCode: number,
+	includePath = false,
+): string {
+	const parts = buildApiError(rawBody, statusCode, includePath);
+	return `${parts.message}\n\nHTTP Status: ${parts.statusCode}`;
+}
+
+/**
+ * Build the NodeOperationError for a failed API response.
+ *
+ * The actionable reason goes in the message and the HTTP status in `description` (n8n renders
+ * it as a subtitle) rather than being concatenated into one blob. The parsed `code` and
+ * `statusCode` are stashed on the error so the node's `continueOnFail` path can emit them as
+ * real fields instead of re-parsing the string.
+ */
+export function createApiError(
+	ctx: IExecuteFunctions,
+	rawBody: unknown,
+	statusCode: number,
+	itemIndex: number,
+	includePath = false,
+): NodeOperationError {
+	const parts = buildApiError(rawBody, statusCode, includePath);
+	const error = new NodeOperationError(ctx.getNode(), parts.message, {
+		itemIndex,
+		description: `HTTP Status: ${parts.statusCode}`,
+	});
+
+	// Read back by TurboDocx.node.ts in continueOnFail mode.
+	(error as NodeOperationError & ApiErrorParts).code = parts.code;
+	(error as NodeOperationError & ApiErrorParts).statusCode = parts.statusCode;
+
+	return error;
 }
 
 /**
@@ -190,6 +311,9 @@ export async function turboDocxApiRequest(
 			json: true,
 			simple: false,
 			resolveWithFullResponse: true,
+			// Client-context headers so the audit trail records the real n8n host/OS/timezone
+			// instead of the generic "API Client". Merged with the credential's auth headers.
+			headers: { ...CLIENT_CONTEXT_HEADERS },
 			...(options.qs && Object.keys(options.qs).length > 0 ? { qs: options.qs } : {}),
 		};
 		response = (await ctx.helpers.requestWithAuthentication.call(
@@ -203,6 +327,9 @@ export async function turboDocxApiRequest(
 			url,
 			ignoreHttpStatusErrors: true,
 			returnFullResponse: true,
+			// Client-context headers so the audit trail records the real n8n host/OS/timezone
+			// instead of the generic "API Client". Merged with the credential's auth headers.
+			headers: { ...CLIENT_CONTEXT_HEADERS },
 		};
 		if (options.qs && Object.keys(options.qs).length > 0) requestOptions.qs = options.qs;
 		if (options.body !== undefined) {
@@ -217,11 +344,7 @@ export async function turboDocxApiRequest(
 	}
 
 	if (response.statusCode >= 400) {
-		throw new NodeOperationError(
-			ctx.getNode(),
-			buildApiErrorMessage(response.body, response.statusCode),
-			{ itemIndex },
-		);
+		throw createApiError(ctx as IExecuteFunctions, response.body, response.statusCode, itemIndex);
 	}
 
 	return applyUnwrap((response.body ?? {}) as IDataObject, options.unwrap);
@@ -305,6 +428,10 @@ export async function turboDocxApiRequestBinary(
 		json: false,
 		ignoreHttpStatusErrors: true,
 		returnFullResponse: true,
+		// Same client-context headers as the JSON path. Downloads hit TurboDocx directly, so
+		// without these they are logged as an anonymous "API Client" while every other call
+		// from the same workflow reports the real host/OS/timezone.
+		headers: { ...CLIENT_CONTEXT_HEADERS },
 	};
 	if (options.qs && Object.keys(options.qs).length > 0) requestOptions.qs = options.qs;
 	if (options.body !== undefined) {
@@ -318,11 +445,7 @@ export async function turboDocxApiRequestBinary(
 	)) as FullResponse;
 
 	if (response.statusCode >= 400) {
-		throw new NodeOperationError(
-			ctx.getNode(),
-			buildApiErrorMessage(response.body, response.statusCode),
-			{ itemIndex },
-		);
+		throw createApiError(ctx as IExecuteFunctions, response.body, response.statusCode, itemIndex);
 	}
 
 	return response.body as Buffer;
@@ -351,11 +474,7 @@ export async function fetchPresignedUrl(
 	})) as FullResponse;
 
 	if (response.statusCode >= 400) {
-		throw new NodeOperationError(
-			ctx.getNode(),
-			buildApiErrorMessage(response.body, response.statusCode),
-			{ itemIndex },
-		);
+		throw createApiError(ctx as IExecuteFunctions, response.body, response.statusCode, itemIndex);
 	}
 
 	return response.body as Buffer;
@@ -410,7 +529,10 @@ export function normalizeUnexpectedError(
 	const apiErrorMessage = nestedError
 		? ((nestedError.message as string) || JSON.stringify(nestedError))
 		: ((backendResponse?.message as string) || (backendResponse?.error as string));
-	const apiErrorCode = (backendResponse?.code as string) || (nestedError?.code as string);
+	const apiErrorCode =
+		(backendResponse?.code as string) ||
+		(nestedError?.code as string) ||
+		stringErrorCode(backendResponse);
 
 	let errorMessage = apiErrorMessage || errorObj.message || 'Request failed';
 	const errorCode = (backendResponse?.type as string) || apiErrorCode || '';
@@ -432,7 +554,7 @@ export function normalizeUnexpectedError(
 	}
 
 	return {
-		message: `${errorMessage}${errorCode ? ` [${errorCode}]` : ''}\n\nHTTP Status: ${statusCode}`,
+		message: `${errorMessage}${formatErrorCode(errorCode)}\n\nHTTP Status: ${statusCode}`,
 		code: apiErrorCode || 'UnknownError',
 		statusCode,
 	};

@@ -23,17 +23,52 @@ function captureCreateBody(additionalFields: Record<string, unknown>) {
 }
 
 describe('Quote create renewalPeriod / termDays coupling', () => {
-	it('omits renewalPeriod for a normal fixed term (backend rejects it unless termDays === -1)', async () => {
+	// Create used to DROP the renewal period here, quietly creating a quote on terms the user
+	// never asked for. Both fields are optional collection entries, so a renewal period is
+	// always deliberate — refuse rather than discard it.
+	it('rejects a renewal period alongside a fixed term instead of silently dropping it', async () => {
 		const { ctx, capture } = captureCreateBody({ termDays: 30, renewalPeriod: 'monthly' });
-		await TurboDocx.prototype.execute.call(ctx);
-		expect(capture.body).toMatchObject({ termDays: 30 });
-		expect(capture.body).not.toHaveProperty('renewalPeriod');
+		await expect(TurboDocx.prototype.execute.call(ctx)).rejects.toThrow(
+			/only applies to auto-renewing quotes/i,
+		);
+		expect(capture.body).toBeUndefined();
+	});
+
+	it('rejects a renewal period with no term at all (backend demands null)', async () => {
+		const { ctx } = captureCreateBody({ renewalPeriod: 'monthly' });
+		await expect(TurboDocx.prototype.execute.call(ctx)).rejects.toThrow(
+			/only applies to auto-renewing quotes/i,
+		);
 	});
 
 	it('sends renewalPeriod only for auto-renewal (termDays === -1)', async () => {
 		const { ctx, capture } = captureCreateBody({ termDays: -1, renewalPeriod: 'annually' });
 		await TurboDocx.prototype.execute.call(ctx);
 		expect(capture.body).toMatchObject({ termDays: -1, renewalPeriod: 'annually' });
+	});
+});
+
+describe('Quote createAndSend renewalPeriod / termDays coupling', () => {
+	it('rejects a mismatched renewal period before creating anything', async () => {
+		const http = jest.fn(async () => okResponse({ result: { id: 'q1' } }));
+		const ctx = makeExecuteCtx({
+			itemCount: 1,
+			params: {
+				resource: 'quote',
+				operation: 'createAndSend',
+				name: 'Q',
+				companyId: 'c1',
+				contactId: 'p1',
+				createAndSendFields: { termDays: 30, renewalPeriod: 'monthly' },
+			},
+			http,
+		});
+
+		await expect(TurboDocx.prototype.execute.call(ctx)).rejects.toThrow(
+			/only applies to auto-renewing quotes/i,
+		);
+		// Nothing was created — the quote is not left half-built with the wrong terms.
+		expect(http).not.toHaveBeenCalled();
 	});
 });
 

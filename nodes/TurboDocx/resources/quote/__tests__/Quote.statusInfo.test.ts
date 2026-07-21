@@ -50,4 +50,30 @@ describe('Quote get — statusInfo', () => {
 		expect(items[0].json).toEqual({ id: 'q-2', name: 'No Status' });
 		expect(items[0].json.statusInfo).toBeUndefined();
 	});
+
+	// preparedBy is the resolved "Prepared by" identity — also a sibling of `result`, dropped
+	// by unwrap: 'result'. The SDKs fold it onto the quote (getQuote), and the node matches.
+	it('merges preparedBy onto the quote instead of dropping it', async () => {
+		const http = jest.fn().mockResolvedValue(
+			okResponse({
+				data: {
+					result: { id: 'q-3', name: 'API Created', status: 'draft' },
+					preparedBy: { name: 'Acme Billing Integration', email: 'billing@acme.com' },
+				},
+			}),
+		);
+		const ctx = makeExecuteCtx({
+			itemCount: 1,
+			params: { resource: 'quote', operation: 'get', quoteId: 'q-3' },
+			http,
+		});
+
+		const [items] = await TurboDocx.prototype.execute.call(ctx);
+
+		expect(items[0].json.id).toBe('q-3');
+		expect(items[0].json.preparedBy).toEqual({
+			name: 'Acme Billing Integration',
+			email: 'billing@acme.com',
+		});
+	});
 });

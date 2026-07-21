@@ -260,7 +260,7 @@ export const quoteFields: INodeProperties[] = [
 				options: RENEWAL_OPTIONS,
 				default: 'monthly',
 				description:
-					'Renewal period for an auto-renewal quote. Only applies when Term Days is -1; ignored otherwise.',
+					'Renewal period for an auto-renewal quote. Only valid when Term Days is -1; any other term is rejected.',
 			},
 			{
 				displayName: 'Tax Rate',
@@ -276,7 +276,7 @@ export const quoteFields: INodeProperties[] = [
 				typeOptions: { minValue: -1 },
 				default: 30,
 				description:
-					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is ignored for any other value).',
+					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is not accepted for any other value).',
 			},
 			{
 				displayName: 'Valid Until',
@@ -372,7 +372,7 @@ export const quoteFields: INodeProperties[] = [
 				options: RENEWAL_OPTIONS,
 				default: 'monthly',
 				description:
-					'Renewal period for an auto-renewal quote. Only applies when Term Days is -1; ignored otherwise.',
+					'Renewal period for an auto-renewal quote. Only valid when Term Days is -1; any other term is rejected.',
 			},
 			{
 				displayName: 'Tax Rate',
@@ -388,7 +388,7 @@ export const quoteFields: INodeProperties[] = [
 				typeOptions: { minValue: -1 },
 				default: 30,
 				description:
-					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is ignored for any other value).',
+					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is not accepted for any other value).',
 			},
 			{
 				displayName: 'Valid Until',
@@ -725,7 +725,7 @@ export const quoteFields: INodeProperties[] = [
 				options: RENEWAL_OPTIONS,
 				default: 'monthly',
 				description:
-					'Renewal period for an auto-renewal quote. Only applies when Term Days is -1; ignored otherwise.',
+					'Renewal period for an auto-renewal quote. Only valid when Term Days is -1; any other term is rejected.',
 			},
 			{
 				displayName: 'Send Valid Until',
@@ -748,7 +748,7 @@ export const quoteFields: INodeProperties[] = [
 				typeOptions: { minValue: -1 },
 				default: 30,
 				description:
-					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is ignored for any other value).',
+					'Days the quote terms cover. Use -1 for an auto-renewal term, which requires a Renewal Period (the Renewal Period is not accepted for any other value).',
 			},
 			{
 				displayName: 'Valid Until',

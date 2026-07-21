@@ -270,8 +270,20 @@ export class TurboDocx implements INodeType {
 				// Re-throw NodeOperationError as-is (already formatted)
 				if (error instanceof NodeOperationError) {
 					if (this.continueOnFail()) {
+						// Same shape as the unexpected-error branch below, so a workflow can
+						// branch on `code` with an IF node regardless of which path failed.
+						// createApiError stashes these; a NodeOperationError raised elsewhere
+						// (e.g. a client-side guard) simply has neither.
+						const parts = error as NodeOperationError & {
+							code?: string;
+							statusCode?: number;
+						};
 						returnData.push({
-							json: { error: error.message },
+							json: {
+								error: error.message,
+								...(parts.code ? { code: parts.code } : {}),
+								...(parts.statusCode ? { statusCode: parts.statusCode } : {}),
+							},
 							pairedItem: { item: i },
 						});
 						continue;
