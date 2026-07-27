@@ -242,14 +242,17 @@ export const turboSignFields: INodeProperties[] = [
 				name: 'senderEmail',
 				type: 'string',
 				default: '',
-				description: 'Email address of the sender',
+				placeholder: 'sales@yourcompany.com',
+				description:
+					'Required. The reply-to address recipients see on the signature email, and the sender recorded in the audit trail. API-key requests have no mailbox of their own, so TurboDocx rejects the request if this is empty rather than sending from an unmonitored address.',
 			},
 			{
 				displayName: 'Sender Name',
 				name: 'senderName',
 				type: 'string',
 				default: '',
-				description: 'Name of the sender (displayed in emails)',
+				description:
+					'Name of the sender (displayed in emails and the audit trail). Defaults to the name of the API key configured in your TurboDocx credential.',
 			},
 		],
 	},

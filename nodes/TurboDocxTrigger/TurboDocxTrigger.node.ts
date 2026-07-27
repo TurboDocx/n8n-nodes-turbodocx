@@ -10,6 +10,7 @@ import {
 } from 'n8n-workflow';
 
 import { verifyWebhookSignature } from '../TurboDocx/shared/verifyWebhookSignature';
+import { resolveClientContextHeaders } from '../TurboDocx/shared/clientContext';
 
 const DEFAULT_BASE_URL = 'https://api.turbodocx.com';
 const WEBHOOK_NAME = 'signature';
@@ -37,6 +38,9 @@ async function apiRequest(
 		url: `${baseUrl}${endpoint}`,
 		ignoreHttpStatusErrors: true,
 		returnFullResponse: true,
+		// Same client-context headers the main node sends, so webhook management calls are
+		// attributed to the real n8n host rather than an anonymous API client.
+		headers: { ...resolveClientContextHeaders() },
 	};
 	if (body !== undefined) {
 		options.body = body;

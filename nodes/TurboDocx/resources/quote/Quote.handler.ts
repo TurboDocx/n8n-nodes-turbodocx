@@ -6,6 +6,27 @@ import {
 	paginatedList,
 } from '../../shared/GenericFunctions';
 
+/**
+ * `renewalPeriod` is coupled to `termDays`: the backend's quote schemas accept it only for an
+ * auto-renewal term (`termDays === -1`) and demand `null` otherwise, so a mismatched pair is a
+ * 400. Both fields are optional collection entries, so the user typed the renewal period on
+ * purpose — dropping it silently would send a quote with terms they did not ask for. Fail loudly
+ * with the fix instead.
+ */
+function assertRenewalPeriodMatchesTerm(
+	ctx: IExecuteFunctions,
+	fields: IDataObject,
+	i: number,
+	collectionName: string,
+): void {
+	if (!fields.renewalPeriod || fields.termDays === -1) return;
+	throw new NodeOperationError(
+		ctx.getNode(),
+		`Renewal Period only applies to auto-renewing quotes. Add Term Days to ${collectionName} and set it to -1, or remove Renewal Period.\n\nHTTP Status: 400`,
+		{ itemIndex: i },
+	);
+}
+
 /** Split a comma/space separated email string into a trimmed array. */
 function parseCcEmails(raw: string): string[] {
 	return raw
@@ -29,13 +50,12 @@ async function executeQuoteResource(
 		const contactId = ctx.getNodeParameter('contactId', i) as string;
 		const additionalFields = ctx.getNodeParameter('additionalFields', i, {}) as IDataObject;
 
+		assertRenewalPeriodMatchesTerm(ctx, additionalFields, i, 'Additional Fields');
+
 		const body: IDataObject = { name, companyId, contactId };
 		if (additionalFields.currency) body.currency = additionalFields.currency;
 		if (additionalFields.termDays !== undefined) body.termDays = additionalFields.termDays;
-		// renewalPeriod is only accepted for auto-renewal terms (termDays === -1);
-		// sending it alongside any other termDays makes the backend reject the request.
-		if (additionalFields.termDays === -1 && additionalFields.renewalPeriod)
-			body.renewalPeriod = additionalFields.renewalPeriod;
+		if (additionalFields.renewalPeriod) body.renewalPeriod = additionalFields.renewalPeriod;
 		if (additionalFields.validUntil) body.validUntil = additionalFields.validUntil;
 		if (additionalFields.taxRate !== undefined) body.taxRate = additionalFields.taxRate;
 		if (additionalFields.priceBookId) body.priceBookId = additionalFields.priceBookId;
@@ -50,9 +70,11 @@ async function executeQuoteResource(
 
 	if (operation === 'get') {
 		const quoteId = ctx.getNodeParameter('quoteId', i) as string;
-		// This endpoint returns `{ result, statusInfo }` — `statusInfo` is a SIBLING of
-		// `result`, so unwrap: 'result' would drop the expiry/derived-status flags entirely.
+		// This endpoint returns `{ result, statusInfo, preparedBy }` — `statusInfo` and
+		// `preparedBy` are SIBLINGS of `result`, so unwrap: 'result' would drop them entirely.
 		// Unwrap the `{ data }` layer only, then merge, mirroring the SDK's getQuote.
+		// `preparedBy` is the resolved "Prepared by" identity ({ name, email }) shown on the
+		// quote PDF; prefer it over `creator` (which may be the internal API service account).
 		const body = await turboDocxApiRequest(
 			ctx,
 			{ method: 'GET', endpoint: `/v1/quotes/${quoteId}`, unwrap: 'smart' },
@@ -60,6 +82,7 @@ async function executeQuoteResource(
 		);
 		const quote = (body.result as IDataObject) ?? body;
 		if (body.statusInfo !== undefined) quote.statusInfo = body.statusInfo;
+		if (body.preparedBy !== undefined) quote.preparedBy = body.preparedBy;
 		return [{ json: quote }];
 	}
 
@@ -93,21 +116,11 @@ async function executeQuoteResource(
 
 		// Nullable fields: explicit clear toggles send null; otherwise include only when set.
 		//
-		// renewalPeriod is conditional on termDays: the backend accepts it only when termDays
-		// is -1 (auto-renewal) and demands `null` otherwise, so sending one without the other
-		// is a 400. Unlike create — which quietly drops it, because both fields carry defaults
-		// and can end up set without the user meaning it — an update names the field explicitly,
-		// so we say why instead of silently doing nothing. The old code sent it regardless and
-		// simply 400'd, so this replaces an opaque failure rather than breaking a working path.
+		// renewalPeriod is conditional on termDays (see assertRenewalPeriodMatchesTerm): sending
+		// one without the other is a 400, so say why instead of failing opaquely at the API.
 		if (updateFields.clearRenewalPeriod === true) body.renewalPeriod = null;
 		else if (updateFields.renewalPeriod) {
-			if (updateFields.termDays !== -1) {
-				throw new NodeOperationError(
-					ctx.getNode(),
-					'Renewal Period only applies to auto-renewing quotes. Add Term Days to Update Fields and set it to -1, or remove Renewal Period.\n\nHTTP Status: 400',
-					{ itemIndex: i },
-				);
-			}
+			assertRenewalPeriodMatchesTerm(ctx, updateFields, i, 'Update Fields');
 			body.renewalPeriod = updateFields.renewalPeriod;
 		}
 
@@ -279,13 +292,13 @@ async function executeQuoteResource(
 		const contactId = ctx.getNodeParameter('contactId', i) as string;
 		const fields = ctx.getNodeParameter('createAndSendFields', i, {}) as IDataObject;
 
+		assertRenewalPeriodMatchesTerm(ctx, fields, i, 'Create and Send Fields');
+
 		// 1) Create the quote.
 		const createBody: IDataObject = { name, companyId, contactId };
 		if (fields.currency) createBody.currency = fields.currency;
 		if (fields.termDays !== undefined) createBody.termDays = fields.termDays;
-		// renewalPeriod is only accepted for auto-renewal terms (termDays === -1).
-		if (fields.termDays === -1 && fields.renewalPeriod)
-			createBody.renewalPeriod = fields.renewalPeriod;
+		if (fields.renewalPeriod) createBody.renewalPeriod = fields.renewalPeriod;
 		if (fields.validUntil) createBody.validUntil = fields.validUntil;
 		if (fields.taxRate !== undefined) createBody.taxRate = fields.taxRate;
 		if (fields.priceBookId) createBody.priceBookId = fields.priceBookId;
