@@ -107,6 +107,21 @@ export async function executeTurboSign(
 		return [{ json: result }];
 	}
 
+	// Returns { document, recipients, summary }. Each recipient carries BOTH `status`
+	// (the raw pending/viewed/completed value) and `effectiveStatus` (the same with the
+	// document's terminal state layered on, so voided/expired are possible). Branch on
+	// effectiveStatus — on a voided document an unsigned signer still reads "pending"
+	// in the raw status.
+	if (operation === 'getRecipients') {
+		const documentId = ctx.getNodeParameter('documentId', i) as string;
+		const result = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint: `/turbosign/documents/${documentId}/recipients`, unwrap: 'smart' },
+			i,
+		);
+		return [{ json: result }];
+	}
+
 	if (operation === 'downloadDocument') {
 		const documentId = ctx.getNodeParameter('documentId', i) as string;
 
