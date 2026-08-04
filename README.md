@@ -70,7 +70,8 @@ npm install @turbodocx/n8n-nodes-turbodocx
 |-----------|-------------|----------|
 | **Prepare for Review** | Upload a document with signature fields and get a preview URL. No emails sent. | Preview field placement before sending to clients |
 | **Prepare for Signing** | Upload a document and automatically send signature requests to all recipients | Send employment agreements, contracts, NDAs for signature |
-| **Get Document Status** | Check the current status (draft, pending, completed, voided) | Verify all parties have signed before next step |
+| **Get Document Status** | Check the document-level status (draft, pending, completed, voided) | Verify all parties have signed before next step |
+| **Get Recipients** | Every recipient with their signing status, email history, and who sent the document | Chase the exact people you're still waiting on, not the whole list |
 | **Download Document** | Download the final signed PDF | Archive to cloud storage or send to accounting |
 | **Void Document** | Cancel a signature request and invalidate all links | Deal falls through, need to cancel request |
 | **Resend Email** | Resend signature request to recipients who haven't signed | Send reminders after 3 days |

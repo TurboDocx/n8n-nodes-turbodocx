@@ -17,13 +17,13 @@ Baseline captured at: SDK `@turbodocx/sdk@0.4.0`, node `@turbodocx/n8n-nodes-tur
 
 | SDK Module | SDK callable methods | Covered in node (v1.2.0) | Gap |
 |---|---:|---:|---|
-| TurboSign (`sign.ts`) | 7 | 7 | none |
+| TurboSign (`sign.ts`) | 8 | 8 | none |
 | Deliverable (`deliverable.ts`) | 7 | 7 | none |
 | TurboQuote (`quote.ts`) | 68 | 68 | none |
 | TurboPartner (`partner.ts`) | 25 | 25 | none (uses 2nd credential) |
 | TurboWebhooks (`webhooks.ts`) | 10 + `verifyWebhookSignature` | 10 + helper | none |
 
-**Full method parity: 117/117 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
+**Full method parity: 118/118 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
 Zero gaps, zero strays.** The only SDK surface intentionally not wrapped is the set of
 [Deliberate Exclusions](#deliberate-exclusions) — helpers, low-level primitives, and
 convenience overloads that have no idiomatic n8n mapping.
@@ -41,12 +41,15 @@ Credential: `turboDocxApi` (apiKey + orgId). Auth headers: `Authorization: Beare
 | `createSignatureReviewLink(req)` | POST `/turbosign/single/prepare-for-review` | turboSign / `prepareForReview` | ✅ |
 | `sendSignature(req)` | POST `/turbosign/single/prepare-for-signing` | turboSign / `prepareForSigning` | ✅ |
 | `getStatus(documentId)` | GET `/turbosign/documents/{id}/status` | turboSign / `getStatus` | ✅ |
+| `getRecipients(documentId)` | GET `/turbosign/documents/{id}/recipients` | turboSign / `getRecipients` | ✅ |
 | `download(documentId)` | GET `/turbosign/documents/{id}/download` | turboSign / `downloadDocument` | ✅ |
 | `void(documentId, reason)` | POST `/turbosign/documents/{id}/void` | turboSign / `voidDocument` | ✅ |
 | `resend(documentId, recipientIds)` | POST `/turbosign/documents/{id}/resend-email` | turboSign / `resendEmail` | ✅ |
 | `getAuditTrail(documentId)` | GET `/turbosign/documents/{id}/audit-trail` | turboSign / `getAuditTrail` | ✅ |
 
-Note: SDK `signUrl` is a response **field** on document objects, not a method — no node operation required.
+Note: `signUrl` is a legacy **field** on the Go and Java `RecipientResponse` models, not a method —
+no node operation required. The API never populates it; signing links are emailed to recipients
+and are not returned by any endpoint.
 
 ---
 
