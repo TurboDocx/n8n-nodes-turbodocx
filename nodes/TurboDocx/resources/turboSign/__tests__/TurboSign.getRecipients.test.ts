@@ -58,7 +58,8 @@ describe('TurboSign getRecipients', () => {
 					lastSentOn: '2026-01-02T09:00:00.000Z',
 					totalSent: 1,
 					reminderCount: 0,
-					lastRemindedAt: null,
+					// Stamped by the initial send — NOT evidence of a reminder.
+					lastRemindedAt: '2026-01-02T09:00:00.000Z',
 					warningCount: 0,
 					lastWarningAt: null,
 				},
