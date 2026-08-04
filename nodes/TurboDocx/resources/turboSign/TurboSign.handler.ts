@@ -112,6 +112,13 @@ export async function executeTurboSign(
 	// document's terminal state layered on, so voided/expired are possible). Branch on
 	// effectiveStatus — on a voided document an unsigned signer still reads "pending"
 	// in the raw status.
+	//
+	// Two `delivery` fields are also easy to misread in a workflow condition:
+	// `reminderCount` counts AUTOMATIC (scheduled) reminders only, so a manual "remind
+	// now" leaves it at 0 while still bumping `totalSent`; and `lastRemindedAt` is a
+	// cadence clock stamped at the initial send (and by warnings), not a record of a
+	// reminder. A freshly-sent document reads a non-null lastRemindedAt with
+	// reminderCount 0. Use `totalSent` to test "have we emailed this person".
 	if (operation === 'getRecipients') {
 		const documentId = ctx.getNodeParameter('documentId', i) as string;
 		const result = await turboDocxApiRequest(
