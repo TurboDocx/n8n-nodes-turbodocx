@@ -10,11 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Releases are now published to npm with a [provenance attestation](https://docs.npmjs.com/generating-provenance-statements).
-  The publish job requests an OIDC token (`id-token: write`) and `publishConfig.provenance`
-  is set, so a publish from anywhere other than the GitHub Actions workflow fails instead of
-  shipping an unattested tarball. Required by the n8n community-node submission check.
+  The publish job requests an OIDC token (`id-token: write`) and passes `--provenance`.
+  Required by the n8n community-node submission check.
+- `publishConfig.provenance` is also set, so a bare `npm publish` run outside CI fails rather
+  than silently shipping an unattested tarball. This is a guardrail against accident, not an
+  enforcement boundary: npm gives CLI flags precedence over `publishConfig`, so an explicit
+  `npm publish --provenance=false` with a valid token would still succeed. Real enforcement
+  would be npm trusted publishing or a required-provenance setting on the package.
 - `repository.url` casing now matches the GitHub repo (`TurboDocx`), and the lockfile
   version field is back in sync with `package.json`.
+
+### Fixed
+
+- `NODE_PACKAGE_VERSION` (the version reported in the `User-Agent`) is bumped in step with
+  `package.json`. It is a hardcoded constant, and left stale a 1.2.1 install would have
+  reported `@turbodocx/sdk/1.2.0 (n8n)`, writing the wrong version into the TurboSign
+  signature audit trail.
 
 ## [1.2.0]
 
