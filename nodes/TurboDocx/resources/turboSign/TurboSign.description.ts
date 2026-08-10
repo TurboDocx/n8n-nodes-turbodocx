@@ -27,6 +27,13 @@ export const turboSignOperations: INodeProperties[] = [
 				action: 'Get audit trail',
 			},
 			{
+				name: 'Get Recipients',
+				value: 'getRecipients',
+				description:
+					'Get every recipient with their signing status, email history, and who sent the document',
+				action: 'Get document recipients',
+			},
+			{
 				name: 'Get Review Link',
 				value: 'prepareForReview',
 				description:
@@ -36,7 +43,7 @@ export const turboSignOperations: INodeProperties[] = [
 			{
 				name: 'Get Status',
 				value: 'getStatus',
-				description: 'Get the current status of a signature document',
+				description: 'Get the document-level status only (use Get Recipients for per-signer detail)',
 				action: 'Get document status',
 			},
 			{
@@ -267,7 +274,14 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['getStatus', 'downloadDocument', 'voidDocument', 'resendEmail', 'getAuditTrail'],
+				operation: [
+					'getStatus',
+					'getRecipients',
+					'downloadDocument',
+					'voidDocument',
+					'resendEmail',
+					'getAuditTrail',
+				],
 			},
 		},
 		default: '',
