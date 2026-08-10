@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1]
+
+### Changed
+
+- Releases are now published to npm with a [provenance attestation](https://docs.npmjs.com/generating-provenance-statements).
+  The publish job requests an OIDC token (`id-token: write`) and `publishConfig.provenance`
+  is set, so a publish from anywhere other than the GitHub Actions workflow fails instead of
+  shipping an unattested tarball. Required by the n8n community-node submission check.
+- `repository.url` casing now matches the GitHub repo (`TurboDocx`), and the lockfile
+  version field is back in sync with `package.json`.
+
 ## [1.2.0]
 
 ### Added
