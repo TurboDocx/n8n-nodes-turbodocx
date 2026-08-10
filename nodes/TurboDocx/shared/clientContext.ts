@@ -40,8 +40,11 @@
  * Hardcoded because `require('../../../package.json')` is a `no-require-imports` violation
  * under the community-node lint config. It must be kept in sync with `package.json`'s
  * `version` — a stale value ships a wrong version into a compliance record.
+ *
+ * Bump this whenever you bump `package.json`. `clientContext.test.ts` asserts the two match,
+ * so forgetting fails the suite rather than shipping.
  */
-export const NODE_PACKAGE_VERSION = '1.2.0';
+export const NODE_PACKAGE_VERSION = '1.2.1';
 
 /**
  * Build the User-Agent, e.g. `@turbodocx/sdk/1.2.0 (n8n)`.

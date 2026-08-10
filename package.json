@@ -1,6 +1,10 @@
 {
     "name": "@turbodocx/n8n-nodes-turbodocx",
-    "version": "1.2.0",
+    "version": "1.2.1",
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    },
     "description": "n8n node for TurboDocx API - document & presentation generation, TurboSign e-signatures, TurboQuote CPQ, TurboPartner management, and webhooks",
     "license": "MIT",
     "homepage": "https://turbodocx.com",
@@ -37,7 +41,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/turbodocx/n8n-nodes-turbodocx.git"
+        "url": "git+https://github.com/TurboDocx/n8n-nodes-turbodocx.git"
     },
     "scripts": {
         "build": "n8n-node build",
