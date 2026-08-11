@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0]
+
+### Added
+
+- **TurboSign → Send Reminder.** Nudges a document's outstanding signers on demand, without
+  waiting on the configured cadence. It works when reminders are disabled or the per-signer cap
+  is spent, and does not consume that cap. Only signers at the current signing order are
+  emailed; later-order or already-signed recipients come back as a `skipped_*` result rather
+  than being dropped, so a workflow can branch on whether anyone was actually emailed.
+
+  The Recipient IDs field is optional: leave it empty to remind everyone whose turn it is. The
+  key is omitted from the request entirely for a blank, absent, or explicitly empty value, since
+  the API requires at least one id whenever `recipientIds` is present.
+
+- **TurboSign → Get Recipients.** Lists a signature document's recipients with their current
+  status.
+
+### Security
+
+- Cleared all 42 open Dependabot advisories (dev-scope dependencies).
+
 ## [1.2.1]
 
 ### Changed
