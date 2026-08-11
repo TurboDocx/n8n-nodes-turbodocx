@@ -199,6 +199,34 @@ export async function executeTurboSign(
 		return [{ json: result }];
 	}
 
+	if (operation === 'sendReminder') {
+		const documentId = ctx.getNodeParameter('documentId', i) as string;
+		const recipientIds = ctx.getNodeParameter('reminderRecipientIds', i, '') as string;
+
+		// The filter is optional: leaving it empty reminds every signer whose turn it is. Only
+		// include the key when it actually names someone — the API requires at least one id when
+		// `recipientIds` is present, so sending an empty array would guarantee a 400.
+		const body: IDataObject = {};
+		if (recipientIds && recipientIds.trim() !== '') {
+			const parsed = parseJsonParameter(ctx, recipientIds, 'reminderRecipientIds', i) as string[];
+			if (Array.isArray(parsed) && parsed.length > 0) {
+				body.recipientIds = parsed;
+			}
+		}
+
+		const result = await turboDocxApiRequest(
+			ctx,
+			{
+				method: 'POST',
+				endpoint: `/turbosign/documents/${documentId}/send-reminder`,
+				body,
+				unwrap: 'smart',
+			},
+			i,
+		);
+		return [{ json: result }];
+	}
+
 	if (operation === 'getAuditTrail') {
 		const documentId = ctx.getNodeParameter('documentId', i) as string;
 		const result = await turboDocxApiRequest(

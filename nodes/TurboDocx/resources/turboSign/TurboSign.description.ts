@@ -53,6 +53,13 @@ export const turboSignOperations: INodeProperties[] = [
 				action: 'Resend signature email',
 			},
 			{
+				name: 'Send Reminder',
+				value: 'sendReminder',
+				description:
+					'Nudge a document\'s outstanding signers, ignoring the automatic reminder schedule',
+				action: 'Send a signature reminder',
+			},
+			{
 				name: 'Send Signature',
 				value: 'prepareForSigning',
 				description:
@@ -280,6 +287,7 @@ export const turboSignFields: INodeProperties[] = [
 					'downloadDocument',
 					'voidDocument',
 					'resendEmail',
+					'sendReminder',
 					'getAuditTrail',
 				],
 			},
@@ -325,5 +333,25 @@ export const turboSignFields: INodeProperties[] = [
 		required: true,
 		placeholder: '["5f673f37-9912-4e72-85aa-8f3649760f6b"]',
 		hint: 'Example: ["5f673f37-9912-4e72-85aa-8f3649760f6b"]',
+	},
+
+	// ===============================
+	// Send Reminder Fields
+	// ===============================
+	{
+		displayName: 'Recipient IDs',
+		name: 'reminderRecipientIds',
+		type: 'json',
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['sendReminder'],
+			},
+		},
+		default: '',
+		description:
+			'Optional JSON array of recipient UUIDs to remind. Leave empty to remind every signer whose turn it is.',
+		placeholder: '["5f673f37-9912-4e72-85aa-8f3649760f6b"]',
+		hint: 'Leave empty to remind all eligible signers. Only signers at the current signing order are emailed.',
 	},
 ];
