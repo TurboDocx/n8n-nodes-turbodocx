@@ -44,7 +44,7 @@
  * Bump this whenever you bump `package.json`. `clientContext.test.ts` asserts the two match,
  * so forgetting fails the suite rather than shipping.
  */
-export const NODE_PACKAGE_VERSION = '1.2.1';
+export const NODE_PACKAGE_VERSION = '1.3.0';
 
 /**
  * Build the User-Agent, e.g. `@turbodocx/sdk/1.2.0 (n8n)`.
