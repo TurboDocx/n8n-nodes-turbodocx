@@ -1,8 +1,8 @@
 {
 	"node": "@turbodocx/n8n-nodes-turbodocx.turboDocx",
-	"nodeVersion": "1.0",
+	"nodeVersion": "1.3.0",
 	"codexVersion": "1.0",
-	"categories": ["Developer Tools", "Miscellaneous", "Productivity", "Sales"],
+	"categories": ["Productivity", "Sales", "Miscellaneous"],
 	"resources": {
 		"credentialDocumentation": [
 			{

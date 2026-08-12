@@ -25,6 +25,17 @@ on the publish command. Both are in place; don't remove them.
 2. `package-lock.json` → both root `version` fields
 3. **`nodes/TurboDocx/shared/clientContext.ts` → `NODE_PACKAGE_VERSION`**
 4. `CHANGELOG.md` → new section
+5. `nodes/TurboDocx/TurboDocx.node.json` → `nodeVersion`
+6. `nodes/TurboDocxTrigger/TurboDocxTrigger.node.json` → `nodeVersion`
+
+Sanity check before you commit the bump — all of these must print the same version:
+
+```bash
+node -p "require('./package.json').version"
+grep -o "'[0-9.]*'" nodes/TurboDocx/shared/clientContext.ts | head -1
+node -p "require('./nodes/TurboDocx/TurboDocx.node.json').nodeVersion"
+node -p "require('./nodes/TurboDocxTrigger/TurboDocxTrigger.node.json').nodeVersion"
+```
 
 Number 3 is the trap and it has already bitten once. It is a hardcoded copy of the version because
 the community-node lint bans reading `package.json` from the node source. Leave it stale and the
@@ -36,6 +47,18 @@ A test *cannot* currently enforce it. Reading `package.json` needs `node:fs` / `
 `__dirname`, all banned **repo-wide** by `@n8n/community-nodes/no-restricted-imports` — moving the
 test outside `nodes/` does not escape it. Enforcing it means excluding test files from the
 cloud-compatibility lint, which gates n8n Cloud verification. Ask before making that trade.
+
+Numbers 5 and 6 are the **codex files**, which carry node metadata into the n8n node panel
+(categories, search aliases, documentation links). Nothing validates them: no lint rule reads
+`categories`, and a released n8n version ships a codex with a trailing space in a category name.
+So a stale `nodeVersion` here will never fail a build — it just makes the published node look
+unmaintained to anyone reading it, which matters while community-node verification is in flight.
+
+One thing to know if you change these: n8n's own convention ties `nodeVersion` to the node's
+internal `version` property (every node in `n8n-nodes-base` says `"1.0"`), not to the package
+release. We deliberately track the release version instead, so it stays legible against what is
+on npm. Keep `codexVersion` at `"1.0"` — that is the schema version of the codex format and has
+nothing to do with our release.
 
 ### Before opening a release PR
 
