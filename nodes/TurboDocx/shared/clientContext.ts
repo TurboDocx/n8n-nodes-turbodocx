@@ -41,10 +41,15 @@
  * under the community-node lint config. It must be kept in sync with `package.json`'s
  * `version` — a stale value ships a wrong version into a compliance record.
  *
- * Bump this whenever you bump `package.json`. `clientContext.test.ts` asserts the two match,
- * so forgetting fails the suite rather than shipping.
+ * Bump this whenever you bump `package.json`. **Nothing enforces it.** `clientContext.test.ts`
+ * only checks the value looks like a semver string — it cannot read `package.json` to compare,
+ * because the require/JSON-import needed to do so is banned by the community-node lint. A stale
+ * value here therefore ships silently, and the wrong version lands in the TurboSign signature
+ * audit trail, which is an immutable compliance record.
+ *
+ * See the version-bump checklist in AGENTS.md; it lists every site that must move together.
  */
-export const NODE_PACKAGE_VERSION = '1.3.0';
+export const NODE_PACKAGE_VERSION = '1.3.1';
 
 /**
  * Build the User-Agent, e.g. `@turbodocx/sdk/1.2.0 (n8n)`.
