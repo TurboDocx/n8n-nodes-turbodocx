@@ -551,7 +551,7 @@ export const quoteFields: INodeProperties[] = [
 	},
 
 	// ===============================
-	// Decline — reason (optional: a draft never reached the customer)
+	// Decline — reason (sent quotes only: a draft has nowhere to store one)
 	// ===============================
 	{
 		displayName: 'Reason',
@@ -560,7 +560,7 @@ export const quoteFields: INodeProperties[] = [
 		default: '',
 		typeOptions: { rows: 2 },
 		description:
-			'Why the quote was declined. Required once a quote has been sent; optional for a draft, which the customer never received.',
+			'Why the quote was declined. Required once a quote has been sent. Leave empty for a draft — the reason is stored on the quote\'s signature document, which a draft does not have, so a reason given here is not recorded.',
 		displayOptions: {
 			show: { resource: QUOTE, operation: ['decline'] },
 		},

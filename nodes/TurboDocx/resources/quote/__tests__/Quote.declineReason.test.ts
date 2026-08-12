@@ -63,6 +63,19 @@ describe('Quote decline — optional reason', () => {
 		expect(capture.body).toEqual({ reason: 'Pulled internally' });
 	});
 
+	// The reason is stored on the quote's linked signature document. A draft has none, so a reason
+	// typed here is accepted by the API and then silently dropped — the field must say so rather
+	// than call itself merely "optional".
+	it('warns that a draft decline reason is not recorded', () => {
+		const declineReason = quoteFields.find(
+			field =>
+				field.name === 'reason' &&
+				(field.displayOptions?.show?.operation as string[] | undefined)?.includes('decline'),
+		);
+
+		expect(declineReason?.description).toMatch(/not recorded/i);
+	});
+
 	it('marks the decline reason optional and the void reason required in the node UI', () => {
 		const declineReason = quoteFields.find(
 			field =>
