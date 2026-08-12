@@ -1,0 +1,32 @@
+{
+	"node": "@turbodocx/n8n-nodes-turbodocx.turboDocxTrigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Developer Tools", "Miscellaneous", "Productivity", "Sales"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/TurboDocx/n8n-nodes-turbodocx#credentials-setup"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/TurboDocx/n8n-nodes-turbodocx#readme"
+			}
+		]
+	},
+	"alias": [
+		"TurboDocx",
+		"TurboSign",
+		"signature",
+		"signed",
+		"e-signature",
+		"esignature",
+		"contract",
+		"document completed",
+		"signature webhook",
+		"webhook",
+		"trigger",
+		"event"
+	]
+}

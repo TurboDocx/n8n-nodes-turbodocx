@@ -1,0 +1,39 @@
+{
+	"node": "@turbodocx/n8n-nodes-turbodocx.turboDocx",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Developer Tools", "Miscellaneous", "Productivity", "Sales"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/TurboDocx/n8n-nodes-turbodocx#credentials-setup"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/TurboDocx/n8n-nodes-turbodocx#readme"
+			}
+		]
+	},
+	"alias": [
+		"TurboDocx",
+		"TurboSign",
+		"TurboQuote",
+		"e-signature",
+		"esignature",
+		"signature",
+		"sign",
+		"contract",
+		"agreement",
+		"NDA",
+		"document generation",
+		"DOCX",
+		"PPTX",
+		"PDF",
+		"template",
+		"deliverable",
+		"proposal",
+		"quote",
+		"CPQ"
+	]
+}
