@@ -64,7 +64,13 @@ export class TurboDocxTrigger implements INodeType {
 		subtitle: '=Signature events',
 		description: 'Starts a workflow when a TurboSign signature event occurs',
 		defaults: {
-			name: 'TurboDocx Trigger',
+			// No space. n8n builds the production webhook path as
+			// `{workflowId}/{nodeName.toLowerCase()}/{path}`, so a space here is stored
+			// percent-encoded but matched decoded on the way in — n8n then 404s a URL it
+			// registered itself, and every delivery is silently dropped. The workflow still
+			// shows as active and the subscription still shows as healthy, so there is
+			// nothing to see until you notice the events never arrive.
+			name: 'TurboDocxTrigger',
 		},
 		inputs: [],
 		outputs: ['main'],
