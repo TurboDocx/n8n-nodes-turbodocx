@@ -249,9 +249,11 @@ async function executeQuoteResource(
 	if (operation === 'decline') {
 		const quoteId = ctx.getNodeParameter('quoteId', i) as string;
 		const reason = ctx.getNodeParameter('reason', i) as string;
+		// A draft has no reason to give, so send the key only when the user actually filled it in.
+		const body = reason?.trim() ? { reason } : {};
 		const result = await turboDocxApiRequest(
 			ctx,
-			{ method: 'POST', endpoint: `/v1/quotes/${quoteId}/decline`, body: { reason }, unwrap: 'result' },
+			{ method: 'POST', endpoint: `/v1/quotes/${quoteId}/decline`, body, unwrap: 'result' },
 			i,
 		);
 		return [{ json: result }];
@@ -259,7 +261,8 @@ async function executeQuoteResource(
 
 	if (operation === 'void') {
 		const quoteId = ctx.getNodeParameter('quoteId', i) as string;
-		const reason = ctx.getNodeParameter('reason', i) as string;
+		// Void keeps its own required field — only decline's reason became optional.
+		const reason = ctx.getNodeParameter('voidReason', i) as string;
 		const result = await turboDocxApiRequest(
 			ctx,
 			{ method: 'POST', endpoint: `/v1/quotes/${quoteId}/void`, body: { reason }, unwrap: 'result' },

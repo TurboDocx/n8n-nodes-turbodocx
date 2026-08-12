@@ -551,18 +551,34 @@ export const quoteFields: INodeProperties[] = [
 	},
 
 	// ===============================
-	// Decline / Void — reason
+	// Decline — reason (optional: a draft never reached the customer)
 	// ===============================
 	{
 		displayName: 'Reason',
 		name: 'reason',
 		type: 'string',
+		default: '',
+		typeOptions: { rows: 2 },
+		description:
+			'Why the quote was declined. Required once a quote has been sent; optional for a draft, which the customer never received.',
+		displayOptions: {
+			show: { resource: QUOTE, operation: ['decline'] },
+		},
+	},
+
+	// ===============================
+	// Void — reason (always required)
+	// ===============================
+	{
+		displayName: 'Reason',
+		name: 'voidReason',
+		type: 'string',
 		required: true,
 		default: '',
 		typeOptions: { rows: 2 },
-		description: 'Reason for declining or voiding the quote',
+		description: 'Reason for voiding the quote',
 		displayOptions: {
-			show: { resource: QUOTE, operation: ['decline', 'void'] },
+			show: { resource: QUOTE, operation: ['void'] },
 		},
 	},
 
