@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1]
+
+### Fixed
+
+- **The signature trigger never fired.** n8n builds a webhook path from the trigger node's name,
+  and the default was `TurboDocx Trigger` — with a space. The space was stored percent-encoded but
+  matched decoded on the way in, so n8n returned 404 for a URL it had registered itself and every
+  delivery was silently dropped. Nothing surfaced it: the workflow read as active and the
+  subscription read as healthy. The default is now `TurboDocxTrigger`, with a regression test.
+
+  Existing workflows keep the name they already have. If your trigger is named with a space,
+  rename it and re-activate. The old URL also stays registered on the org webhook, so remove it or
+  every event fires one good delivery and one 404.
+
+### Added
+
+- **Codex metadata for both nodes.** They now carry categories (Productivity, Sales,
+  Miscellaneous), documentation links, and search aliases, so the node is findable by terms like
+  "esignature", "contract", "NDA", "PDF" and "quote" rather than only by name. Previously n8n
+  logged `No codex available` and fell back to no categories and no links.
+
 ## [1.3.0]
 
 ### Added
