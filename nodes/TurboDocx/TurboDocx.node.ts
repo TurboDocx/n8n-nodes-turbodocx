@@ -4,6 +4,7 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	INodeProperties,
+	NodeConnectionTypes,
 	NodeOperationError,
 } from 'n8n-workflow';
 
@@ -135,8 +136,8 @@ export class TurboDocx implements INodeType {
 		defaults: {
 			name: 'TurboDocx',
 		},
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'turboDocxApi',

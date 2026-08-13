@@ -29,7 +29,10 @@ export const CRED_STANDARD = 'turboDocxApi';
 export const CRED_PARTNER = 'turboDocxPartnerApi';
 
 interface FullResponse {
-	statusCode: number;
+	// Optional on purpose: the helpers are cast to FullResponse with `as`, so nothing at
+	// runtime guarantees a statusCode is present. Typing it optional keeps the `assertOk`
+	// missing-status check honest (rather than dead code the compiler thinks unreachable).
+	statusCode?: number;
 	body: unknown;
 	headers?: unknown;
 }
@@ -223,6 +226,23 @@ export function createApiError(
 }
 
 /**
+ * Throw a NodeOperationError for any response that is not a 2xx success (#20 / #22).
+ *
+ * The previous `statusCode >= 400` guard let two non-success outcomes through as a silent
+ * `{}` success: a 3xx redirect (the legacy multipart helper does not follow a POST redirect,
+ * so it returns the 3xx as the final response), and a missing statusCode (the `as FullResponse`
+ * cast is unchecked). Both are the worst failure mode for a signature product — the node
+ * reports success and the workflow acts on a document that was never created. This treats
+ * anything outside 200–299, or an absent status, as an error so it surfaces loudly.
+ */
+function assertOk(ctx: IExecuteFunctions, response: FullResponse, itemIndex: number): void {
+	const { statusCode } = response;
+	if (typeof statusCode !== 'number' || statusCode < 200 || statusCode >= 300) {
+		throw createApiError(ctx, response.body, statusCode ?? 0, itemIndex);
+	}
+}
+
+/**
  * Response envelope unwrapping. The TurboDocx backend wraps payloads in `{ data }`,
  * and TurboQuote single-entity endpoints add a second `{ result }` layer. These modes
  * mirror the SDK's `smartUnwrap` so n8n items carry the meaningful payload, not the envelope.
@@ -343,9 +363,7 @@ export async function turboDocxApiRequest(
 		)) as FullResponse;
 	}
 
-	if (response.statusCode >= 400) {
-		throw createApiError(ctx as IExecuteFunctions, response.body, response.statusCode, itemIndex);
-	}
+	assertOk(ctx as IExecuteFunctions, response, itemIndex);
 
 	return applyUnwrap((response.body ?? {}) as IDataObject, options.unwrap);
 }
@@ -444,9 +462,7 @@ export async function turboDocxApiRequestBinary(
 		requestOptions,
 	)) as FullResponse;
 
-	if (response.statusCode >= 400) {
-		throw createApiError(ctx as IExecuteFunctions, response.body, response.statusCode, itemIndex);
-	}
+	assertOk(ctx as IExecuteFunctions, response, itemIndex);
 
 	return response.body as Buffer;
 }
@@ -473,9 +489,7 @@ export async function fetchPresignedUrl(
 		returnFullResponse: true,
 	})) as FullResponse;
 
-	if (response.statusCode >= 400) {
-		throw createApiError(ctx as IExecuteFunctions, response.body, response.statusCode, itemIndex);
-	}
+	assertOk(ctx as IExecuteFunctions, response, itemIndex);
 
 	return response.body as Buffer;
 }

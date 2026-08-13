@@ -5,6 +5,26 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2]
+
+### Fixed
+
+- **Non-2xx API responses on multipart operations no longer report success (#20, #22).** The
+  status guard only rejected `>= 400`, so a 3xx redirect — which the legacy multipart helper does
+  not follow on a POST — or a response with no status code fell through to the success path and
+  emitted an empty `{}`. The node reported success for a document that was never created, and a
+  downstream row could be marked "sent for signature" for a signature request that did not exist.
+  All request paths now treat anything outside 200–299, or a missing status code, as an error
+  wrapped in `NodeOperationError`, so failures surface loudly and route to the error output.
+
+### Changed
+
+- **n8n community-node verification fixes (#21).** Use `NodeConnectionTypes.Main` instead of the
+  `'main'` string literal on both nodes; stop advertising the trigger as an AI tool (a trigger
+  cannot be one); and remove the npm `overrides` block, which is npm-only and ignored by anyone
+  installing the node. See #23 for the dev-scope `npm audit` trade-off that removal records. The
+  main node deliberately keeps `usableAsTool` — that one is intentional and stays.
+
 ## [1.3.1]
 
 ### Fixed
