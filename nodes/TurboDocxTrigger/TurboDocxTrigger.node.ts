@@ -6,6 +6,7 @@ import {
 	IWebhookResponseData,
 	IDataObject,
 	IHttpRequestOptions,
+	NodeConnectionTypes,
 	NodeOperationError,
 } from 'n8n-workflow';
 
@@ -54,6 +55,10 @@ async function apiRequest(
 	return { statusCode: res.statusCode, body: (res.body ?? {}) as IDataObject };
 }
 
+// n8n verification finding #2: a trigger cannot be invoked as an AI tool, so it must not carry
+// `usableAsTool`. The type only permits `true` (not `false`), and omitting it trips the
+// community-node lint rule, so the rule is disabled here with that justification.
+// eslint-disable-next-line @n8n/community-nodes/node-usable-as-tool -- triggers are never AI tools
 export class TurboDocxTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'TurboDocx Trigger',
@@ -73,7 +78,7 @@ export class TurboDocxTrigger implements INodeType {
 			name: 'TurboDocxTrigger',
 		},
 		inputs: [],
-		outputs: ['main'],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'turboDocxApi',
@@ -178,7 +183,6 @@ export class TurboDocxTrigger implements INodeType {
 				],
 			},
 		],
-		usableAsTool: true,
 	};
 
 	webhookMethods = {
