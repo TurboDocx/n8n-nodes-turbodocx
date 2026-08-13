@@ -55,6 +55,16 @@ async function apiRequest(
 	return { statusCode: res.statusCode, body: (res.body ?? {}) as IDataObject };
 }
 
+/**
+ * A response is a success only inside 2xx. The old `>= 400` / `< 400` guards on these webhook
+ * management calls treated a 3xx redirect (or a missing status code) as success — the same
+ * non-2xx-as-success defect fixed for the main node's helpers (#20/#22). Getting it wrong here
+ * is worse than elsewhere: `create()` would read `secret` off a non-2xx body that never carried
+ * one, silently disabling signature verification. Mirrors `assertOk` in GenericFunctions.
+ */
+const isSuccess = (statusCode?: number): boolean =>
+	statusCode !== undefined && statusCode >= 200 && statusCode < 300;
+
 // n8n verification finding #2: a trigger cannot be invoked as an AI tool, so it must not carry
 // `usableAsTool`. The type only permits `true` (not `false`), and omitting it trips the
 // community-node lint rule, so the rule is disabled here with that justification.
@@ -190,7 +200,7 @@ export class TurboDocxTrigger implements INodeType {
 			async checkExists(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default') as string;
 				const res = await apiRequest(this, 'GET', `/api/webhooks/${WEBHOOK_NAME}`);
-				if (res.statusCode >= 400) return false;
+				if (!isSuccess(res.statusCode)) return false;
 				const data = (res.body.data as IDataObject) ?? res.body;
 				const urls = (data.urls as string[]) ?? [];
 				return urls.includes(webhookUrl);
@@ -211,7 +221,7 @@ export class TurboDocxTrigger implements INodeType {
 				// Is there already a signature webhook?
 				const existing = await apiRequest(this, 'GET', `/api/webhooks/${WEBHOOK_NAME}`);
 
-				if (existing.statusCode < 400 && existing.body) {
+				if (isSuccess(existing.statusCode) && existing.body) {
 					const data = (existing.body.data as IDataObject) ?? existing.body;
 					const existingUrls = (data.urls as string[]) ?? [];
 					const existingEvents = (data.events as string[]) ?? [];
@@ -222,7 +232,7 @@ export class TurboDocxTrigger implements INodeType {
 						events: mergedEvents,
 						isActive: true,
 					});
-					if (patch.statusCode >= 400) {
+					if (!isSuccess(patch.statusCode)) {
 						throw new NodeOperationError(
 							this.getNode(),
 							`Failed to attach to the existing TurboDocx signature webhook (HTTP ${patch.statusCode}).`,
@@ -240,7 +250,7 @@ export class TurboDocxTrigger implements INodeType {
 					urls: [webhookUrl],
 					events,
 				});
-				if (created.statusCode >= 400) {
+				if (!isSuccess(created.statusCode)) {
 					// Only an auth status genuinely implies an insufficient key; a 409 means
 					// another receiver created the webhook between our GET and POST, and a
 					// 400 is a validation problem — don't misattribute those to the key.
@@ -267,7 +277,7 @@ export class TurboDocxTrigger implements INodeType {
 				const staticData = this.getWorkflowStaticData('node') as WebhookStaticData;
 
 				const existing = await apiRequest(this, 'GET', `/api/webhooks/${WEBHOOK_NAME}`);
-				if (existing.statusCode < 400 && existing.body) {
+				if (isSuccess(existing.statusCode) && existing.body) {
 					const data = (existing.body.data as IDataObject) ?? existing.body;
 					const urls = ((data.urls as string[]) ?? []).filter((u) => u !== webhookUrl);
 					if (urls.length > 0) {
