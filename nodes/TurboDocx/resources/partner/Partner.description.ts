@@ -246,7 +246,7 @@ export const partnerOrganizationFields: INodeProperties[] = [
 				type: 'boolean',
 				default: false,
 				description:
-					'When enabled, a signer can download the unsigned PDF from the signing page before they sign it (for example, to review it with their legal team). Defaults to off.',
+					'Whether to show a Download button on the signing page so a signer can save the unsigned PDF before signing (for example, to review it with their legal team). Off by default.',
 			},
 		],
 	},
