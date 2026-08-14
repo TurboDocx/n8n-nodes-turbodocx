@@ -203,7 +203,7 @@ export const partnerOrganizationFields: INodeProperties[] = [
 	// Update Preferences
 	{
 		// A collection rather than a `json` field (unlike Features/Tracking): the backend
-		// allowlist is exactly three booleans, so real toggles beat hand-written JSON — and
+		// allowlist is exactly four booleans, so real toggles beat hand-written JSON — and
 		// only the keys the user actually adds are sent, which is the merge semantics the
 		// endpoint wants. Every other key in the org's preferences blob is preserved.
 		displayName: 'Preferences',
