@@ -11,6 +11,12 @@ export interface MockExecuteOptions {
 	httpUnauthenticated?: jest.Mock;
 	/** continueOnFail() return value. */
 	continueOnFail?: boolean;
+	/**
+	 * Extra credential fields merged over the default `{ baseUrl }`. Partner resources
+	 * read `partnerId` off the credential (it is not a node parameter), so any test that
+	 * asserts a partner URL has to supply it.
+	 */
+	credentials?: Record<string, unknown>;
 }
 
 /**
@@ -24,7 +30,7 @@ export function makeExecuteCtx(opts: MockExecuteOptions): IExecuteFunctions {
 		getInputData: () => items,
 		getNode: () => ({ name: 'TurboDocx', type: 'turboDocx' }),
 		continueOnFail: () => opts.continueOnFail ?? false,
-		getCredentials: async () => ({ baseUrl: 'https://api.example.com' }),
+		getCredentials: async () => ({ baseUrl: 'https://api.example.com', ...opts.credentials }),
 		getNodeParameter: (name: string, _itemIndex?: number, fallback?: unknown) =>
 			name in opts.params ? opts.params[name] : fallback,
 		helpers: {
