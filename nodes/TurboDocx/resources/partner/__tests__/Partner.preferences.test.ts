@@ -23,6 +23,7 @@ describe('Partner organization preferences', () => {
 		hideSignatureOutline: false,
 		hideSignatureHash: false,
 		lockedFieldsBackground: true,
+		allowDownloadBeforeSigning: false,
 	};
 
 	function run(params: Record<string, unknown>) {
@@ -80,6 +81,7 @@ describe('Partner organization preferences', () => {
 		expect(Object.keys(body.preferences)).toEqual(['hideSignatureHash']);
 		expect(body.preferences.lockedFieldsBackground).toBeUndefined();
 		expect(body.preferences.hideSignatureOutline).toBeUndefined();
+		expect(body.preferences.allowDownloadBeforeSigning).toBeUndefined();
 	});
 
 	it('fails before the request when no preference was added', async () => {

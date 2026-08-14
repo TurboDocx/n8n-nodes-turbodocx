@@ -203,7 +203,7 @@ export const partnerOrganizationFields: INodeProperties[] = [
 	// Update Preferences
 	{
 		// A collection rather than a `json` field (unlike Features/Tracking): the backend
-		// allowlist is exactly three booleans, so real toggles beat hand-written JSON — and
+		// allowlist is exactly four booleans, so real toggles beat hand-written JSON — and
 		// only the keys the user actually adds are sent, which is the merge semantics the
 		// endpoint wants. Every other key in the org's preferences blob is preserved.
 		displayName: 'Preferences',
@@ -239,6 +239,14 @@ export const partnerOrganizationFields: INodeProperties[] = [
 				default: true,
 				description:
 					'Whether to render locked fields with a grey box background instead of plain text',
+			},
+			{
+				displayName: 'Allow Download Before Signing',
+				name: 'allowDownloadBeforeSigning',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to show a Download button on the signing page so a signer can save the unsigned PDF before signing (for example, to review it with their legal team). Off by default.',
 			},
 		],
 	},
