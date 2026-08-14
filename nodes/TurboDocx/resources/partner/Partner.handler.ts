@@ -143,6 +143,60 @@ async function executePartnerOrganization(
 		return [{ json: result }];
 	}
 
+	if (operation === 'getPreferences') {
+		const organizationId = ctx.getNodeParameter('organizationId', i) as string;
+		const result = await turboDocxApiRequest(
+			ctx,
+			{
+				method: 'GET',
+				endpoint: `/partner/${partnerId}/organizations/${organizationId}/preferences`,
+				credentialName: CRED_PARTNER,
+				unwrap: 'data',
+			},
+			i,
+		);
+		return [{ json: result }];
+	}
+
+	if (operation === 'updatePreferences') {
+		const organizationId = ctx.getNodeParameter('organizationId', i) as string;
+		const preferences = ctx.getNodeParameter('preferences', i, {}) as IDataObject;
+		// The backend requires at least one key (Joi `.min(1)`), so an untouched collection
+		// would 400 on a round trip. Fail here with a message that names the fix instead.
+		if (Object.keys(preferences).length === 0) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'No preferences to update. Add at least one preference under "Preferences".',
+				{ itemIndex: i },
+			);
+		}
+		// The toggles themselves always produce real booleans, but an n8n expression can
+		// resolve to anything — and the API validates these strictly (a string "true" is a
+		// 400, not a coerced true). Name the offending key here rather than surfacing an
+		// opaque validation error from the server.
+		for (const [key, value] of Object.entries(preferences)) {
+			if (typeof value !== 'boolean') {
+				throw new NodeOperationError(
+					ctx.getNode(),
+					`Preference "${key}" must be true or false, but got ${typeof value} (${JSON.stringify(value)}). If this comes from an expression, convert it to a boolean.`,
+					{ itemIndex: i },
+				);
+			}
+		}
+		const result = await turboDocxApiRequest(
+			ctx,
+			{
+				method: 'PATCH',
+				endpoint: `/partner/${partnerId}/organizations/${organizationId}/preferences`,
+				body: { preferences },
+				credentialName: CRED_PARTNER,
+				unwrap: 'data',
+			},
+			i,
+		);
+		return [{ json: result }];
+	}
+
 	if (operation === 'delete') {
 		const organizationId = ctx.getNodeParameter('organizationId', i) as string;
 		const result = await turboDocxApiRequest(

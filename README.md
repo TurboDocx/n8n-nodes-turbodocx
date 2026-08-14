@@ -117,11 +117,11 @@ Full CPQ surface, modelled as several resources for an intuitive UX:
 
 ### TurboPartner
 
-Provision and manage customer organizations from a partner account. **Requires the separate "TurboDocx Partner API" credential** (a `TDXP-` partner key + partner ID).
+Provision and manage customer organizations from a partner account — including each tenant's TurboSign display preferences, so signature appearance can be set per org without logging into its settings UI. **Requires the separate "TurboDocx Partner API" credential** (a `TDXP-` partner key + partner ID).
 
 | Resource | Operations |
 |----------|-----------|
-| **Partner Organization** | Create, Get Many, Get, Update, Delete, Update Entitlements |
+| **Partner Organization** | Create, Get Many, Get, Update, Delete, Update Entitlements, Get Preferences, Update Preferences |
 | **Partner Org User** | Get Many, Add, Update Role, Remove, Resend Invite |
 | **Partner Org API Key** | Get Many, Create, Update, Revoke |
 | **Partner API Key** | Get Many, Create, Update, Revoke |

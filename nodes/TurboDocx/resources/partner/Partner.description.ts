@@ -71,6 +71,12 @@ export const partnerOrganizationOperations: INodeProperties[] = [
 				action: 'Get many organizations',
 			},
 			{
+				name: 'Get Preferences',
+				value: 'getPreferences',
+				description: "Get an organization's TurboSign display preferences",
+				action: 'Get organization preferences',
+			},
+			{
 				name: 'Update',
 				value: 'update',
 				description: "Update an organization's name",
@@ -81,6 +87,12 @@ export const partnerOrganizationOperations: INodeProperties[] = [
 				value: 'updateEntitlements',
 				description: "Update an organization's features and tracking entitlements",
 				action: 'Update organization entitlements',
+			},
+			{
+				name: 'Update Preferences',
+				value: 'updatePreferences',
+				description: "Update an organization's TurboSign display preferences",
+				action: 'Update organization preferences',
 			},
 		],
 		default: 'list',
@@ -97,7 +109,14 @@ const organizationIdField: INodeProperties = {
 	displayOptions: {
 		show: {
 			resource: ORG,
-			operation: ['get', 'update', 'delete', 'updateEntitlements'],
+			operation: [
+				'get',
+				'update',
+				'delete',
+				'updateEntitlements',
+				'getPreferences',
+				'updatePreferences',
+			],
 		},
 	},
 };
@@ -179,6 +198,49 @@ export const partnerOrganizationFields: INodeProperties[] = [
 			'JSON object of usage tracking counters to update. Keys: numUsers, numProjectspaces, numTemplates, storageUsed (bytes), numGeneratedDeliverables, numSignaturesUsed, numQuotesSent, currentAICredits.',
 		placeholder: '{"numUsers":12,"storageUsed":5368709120}',
 		displayOptions: { show: { resource: ORG, operation: ['updateEntitlements'] } },
+	},
+
+	// Update Preferences
+	{
+		// A collection rather than a `json` field (unlike Features/Tracking): the backend
+		// allowlist is exactly three booleans, so real toggles beat hand-written JSON — and
+		// only the keys the user actually adds are sent, which is the merge semantics the
+		// endpoint wants. Every other key in the org's preferences blob is preserved.
+		displayName: 'Preferences',
+		name: 'preferences',
+		type: 'collection',
+		placeholder: 'Add Preference',
+		default: {},
+		description:
+			'TurboSign display preferences to set. Only the preferences you add are changed; every other organization setting is left untouched.',
+		displayOptions: { show: { resource: ORG, operation: ['updatePreferences'] } },
+		options: [
+			{
+				displayName: 'Hide Signature Hash',
+				name: 'hideSignatureHash',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to hide the verification hash printed on signed fields',
+			},
+			{
+				displayName: 'Hide Signature Outline',
+				name: 'hideSignatureOutline',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to hide the outline/label drawn around signed fields',
+			},
+			{
+				displayName: 'Locked Fields Background',
+				name: 'lockedFieldsBackground',
+				type: 'boolean',
+				// Defaults to true to mirror the backend's effective default (the historical
+				// grey box), so adding the toggle and not touching it is a no-op rather than a
+				// silent flip to plain text.
+				default: true,
+				description:
+					'Whether to render locked fields with a grey box background instead of plain text',
+			},
+		],
 	},
 
 	// Get Many

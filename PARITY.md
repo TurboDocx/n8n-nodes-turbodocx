@@ -20,10 +20,10 @@ Baseline captured at: SDK `@turbodocx/sdk@0.4.0`, node `@turbodocx/n8n-nodes-tur
 | TurboSign (`sign.ts`) | 8 | 8 | none |
 | Deliverable (`deliverable.ts`) | 7 | 7 | none |
 | TurboQuote (`quote.ts`) | 68 | 68 | none |
-| TurboPartner (`partner.ts`) | 25 | 25 | none (uses 2nd credential) |
+| TurboPartner (`partner.ts`) | 27 | 27 | none (uses 2nd credential) |
 | TurboWebhooks (`webhooks.ts`) | 10 + `verifyWebhookSignature` | 10 + helper | none |
 
-**Full method parity: 118/118 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
+**Full method parity: 120/120 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
 Zero gaps, zero strays.** The only SDK surface intentionally not wrapped is the set of
 [Deliberate Exclusions](#deliberate-exclusions) — helpers, low-level primitives, and
 convenience overloads that have no idiomatic n8n mapping.
@@ -157,6 +157,7 @@ All endpoints prefixed `/partner/{partnerId}/`. Incompatible auth with the stand
 
 ### Partner Organizations
 | `createOrganization` `listOrganizations` `getOrganizationDetails` `updateOrganizationInfo` `deleteOrganization` `updateOrganizationEntitlements` | `/organization(s)*` | partnerOrganization / create·list·get·update·delete·updateEntitlements | ✅ |
+| `getOrganizationPreferences` `updateOrganizationPreferences` | `/organizations/{id}/preferences` | partnerOrganization / getPreferences·updatePreferences | ✅ |
 
 ### Organization Users
 | `listOrganizationUsers` `addUserToOrganization` `updateOrganizationUserRole` `removeUserFromOrganization` `resendOrganizationInvitationToUser` | `/organizations/{id}/users*` | partnerOrgUser / list·add·updateRole·remove·resendInvite | ✅ |
