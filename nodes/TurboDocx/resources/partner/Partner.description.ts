@@ -240,6 +240,14 @@ export const partnerOrganizationFields: INodeProperties[] = [
 				description:
 					'Whether to render locked fields with a grey box background instead of plain text',
 			},
+			{
+				displayName: 'Allow Download Before Signing',
+				name: 'allowDownloadBeforeSigning',
+				type: 'boolean',
+				default: false,
+				description:
+					'When enabled, a signer can download the unsigned PDF from the signing page before they sign it (for example, to review it with their legal team). Defaults to off.',
+			},
 		],
 	},
 
