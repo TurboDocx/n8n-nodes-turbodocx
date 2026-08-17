@@ -80,6 +80,13 @@
         "ts-jest": "^29.2.5",
         "typescript": "5.9.2"
     },
+    "overrides": {
+        "form-data@^4": "4.0.6",
+        "undici@^6": "6.28.0",
+        "handlebars": "4.7.9",
+        "minimatch@9": "9.0.9",
+        "lodash": "4.18.1"
+    },
     "peerDependencies": {
         "n8n-workflow": "*"
     }
