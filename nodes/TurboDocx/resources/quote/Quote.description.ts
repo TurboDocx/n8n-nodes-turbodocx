@@ -83,7 +83,7 @@ export const quoteOperations: INodeProperties[] = [
 			{
 				name: 'Decline',
 				value: 'decline',
-				description: 'Decline a quote with a reason',
+				description: 'Decline a quote (reason required once sent, optional for a draft)',
 				action: 'Decline a quote',
 			},
 			{

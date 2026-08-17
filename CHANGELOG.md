@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0]
+
+### Changed
+
+- **Quote Decline now supports draft quotes, and the decline reason is conditional.** The Decline
+  operation previously always required a reason. A quote can now be declined while still in
+  **draft**, in which case the reason is **optional**; once the quote has been **sent**, a reason
+  remains **required**. The Void operation's reason requirement is unchanged.
+
 ## [1.3.2]
 
 ### Fixed
