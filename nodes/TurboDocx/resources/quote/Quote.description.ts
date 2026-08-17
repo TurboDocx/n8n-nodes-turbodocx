@@ -83,7 +83,7 @@ export const quoteOperations: INodeProperties[] = [
 			{
 				name: 'Decline',
 				value: 'decline',
-				description: 'Decline a quote with a reason',
+				description: 'Decline a quote (reason required once sent, optional for a draft)',
 				action: 'Decline a quote',
 			},
 			{
@@ -551,18 +551,34 @@ export const quoteFields: INodeProperties[] = [
 	},
 
 	// ===============================
-	// Decline / Void — reason
+	// Decline — reason (sent quotes only: a draft has nowhere to store one)
 	// ===============================
 	{
 		displayName: 'Reason',
 		name: 'reason',
 		type: 'string',
+		default: '',
+		typeOptions: { rows: 2 },
+		description:
+			'Why the quote was declined. Required once a quote has been sent. Leave empty for a draft — the reason is stored on the quote\'s signature document, which a draft does not have, so a reason given here is not recorded.',
+		displayOptions: {
+			show: { resource: QUOTE, operation: ['decline'] },
+		},
+	},
+
+	// ===============================
+	// Void — reason (always required)
+	// ===============================
+	{
+		displayName: 'Reason',
+		name: 'voidReason',
+		type: 'string',
 		required: true,
 		default: '',
 		typeOptions: { rows: 2 },
-		description: 'Reason for declining or voiding the quote',
+		description: 'Reason for voiding the quote',
 		displayOptions: {
-			show: { resource: QUOTE, operation: ['decline', 'void'] },
+			show: { resource: QUOTE, operation: ['void'] },
 		},
 	},
 
