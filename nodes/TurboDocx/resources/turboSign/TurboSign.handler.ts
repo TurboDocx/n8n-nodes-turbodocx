@@ -5,6 +5,59 @@ import {
 	parseJsonParameter,
 } from '../../shared/GenericFunctions';
 
+const CONDITIONAL_OPERATORS = ['is_checked', 'is_not_checked'];
+const CONDITIONAL_ACTIONS = ['show', 'unlock'];
+
+/**
+ * Lightweight SHAPE validation for conditional (IF/THEN) fields, mirroring the backend's
+ * new 400 on `POST /turbosign/single/prepare-for-signing`. The `fields` parameter is a raw
+ * JSON passthrough forwarded verbatim as a multipart part — so `metadata` reaches the backend
+ * with zero serialization change and this only pre-flights the obviously malformed rules to
+ * fail fast in the workflow rather than after a round-trip.
+ *
+ * A field carries a conditional rule under `metadata.conditional`:
+ *   { controllingFieldKey: string, operator: "is_checked"|"is_not_checked", action: "show"|"unlock" }
+ * where `controllingFieldKey` matches the `metadata.fieldKey` on some controlling checkbox.
+ *
+ * Deliberately does NOT throw on a DANGLING `controllingFieldKey` (one that names no existing
+ * checkbox): the backend fails open by design, so a dangling ref is allowed.
+ */
+function validateConditionalFields(ctx: IExecuteFunctions, parsedFields: unknown, i: number): void {
+	if (!Array.isArray(parsedFields)) return;
+
+	for (const field of parsedFields) {
+		if (!field || typeof field !== 'object') continue;
+		const metadata = (field as IDataObject).metadata;
+		if (!metadata || typeof metadata !== 'object') continue;
+		const conditional = (metadata as IDataObject).conditional;
+		if (!conditional || typeof conditional !== 'object') continue;
+
+		const { controllingFieldKey, operator, action } = conditional as IDataObject;
+
+		if (typeof controllingFieldKey !== 'string' || controllingFieldKey.trim() === '') {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'A conditional field is missing metadata.conditional.controllingFieldKey. Set it to the metadata.fieldKey of the controlling checkbox.\n\nHTTP Status: 400',
+				{ itemIndex: i },
+			);
+		}
+		if (typeof operator !== 'string' || !CONDITIONAL_OPERATORS.includes(operator)) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`Invalid metadata.conditional.operator "${String(operator)}". Must be one of: ${CONDITIONAL_OPERATORS.join(', ')}.\n\nHTTP Status: 400`,
+				{ itemIndex: i },
+			);
+		}
+		if (typeof action !== 'string' || !CONDITIONAL_ACTIONS.includes(action)) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`Invalid metadata.conditional.action "${String(action)}". Must be one of: ${CONDITIONAL_ACTIONS.join(', ')}.\n\nHTTP Status: 400`,
+				{ itemIndex: i },
+			);
+		}
+	}
+}
+
 interface ITurboSignAdditionalFields {
 	documentName?: string;
 	documentDescription?: string;
@@ -42,6 +95,11 @@ async function buildPrepareBody(
 	const recipients = ctx.getNodeParameter('recipients', i) as string;
 	const fields = ctx.getNodeParameter('fields', i) as string;
 	const additionalFields = ctx.getNodeParameter('additionalFields', i, {}) as ITurboSignAdditionalFields;
+
+	// Shape-check any conditional (IF/THEN) rules before the round-trip. `fields` itself is
+	// still forwarded verbatim as a multipart part below — this parse is validation-only and
+	// does not alter what reaches the backend.
+	validateConditionalFields(ctx, parseJsonParameter(ctx, fields, 'fields', i), i);
 
 	const requestBody: ITurboSignRequestBody = {
 		recipients,
