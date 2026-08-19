@@ -210,11 +210,11 @@ export const turboSignFields: INodeProperties[] = [
 		},
 		default: '',
 		description:
-			'JSON array of signature fields with recipientEmail, type, and template anchor',
+			'JSON array of signature fields with recipientEmail, type, and template anchor. Optional per-field "metadata" enables conditional (IF/THEN) logic: put "metadata":{"fieldKey":"agree_terms"} on a controlling checkbox, and on a dependent field add "metadata":{"conditional":{"controllingFieldKey":"agree_terms","operator":"is_checked" or "is_not_checked","action":"show" or "unlock"}} (show = hidden until met; unlock = visible-but-read-only until met).',
 		required: true,
 		placeholder:
 			'[{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{Signature1}","placement":"replace","size":{"width":200,"height":50}}}]',
-		hint: 'Example: [{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{SalesSigner}","placement":"replace","size":{"width":200,"height":50}}},{"recipientEmail":"client@example.com","type":"signature","template":{"anchor":"{ClientSigner}","placement":"replace","size":{"width":200,"height":50}}}]',
+		hint: 'Example: [{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{SalesSigner}","placement":"replace","size":{"width":200,"height":50}}},{"recipientEmail":"client@example.com","type":"signature","template":{"anchor":"{ClientSigner}","placement":"replace","size":{"width":200,"height":50}}}]. Conditional example: a checkbox {"recipientEmail":"client@example.com","type":"checkbox","template":{"anchor":"{AgreeTerms}","placement":"replace","size":{"width":20,"height":20}},"metadata":{"fieldKey":"agree_terms"}} controls a text field {"recipientEmail":"client@example.com","type":"text","template":{"anchor":"{Reason}","placement":"replace","size":{"width":200,"height":30}},"metadata":{"conditional":{"controllingFieldKey":"agree_terms","operator":"is_checked","action":"show"}}}.',
 	},
 	{
 		displayName: 'Additional Fields',

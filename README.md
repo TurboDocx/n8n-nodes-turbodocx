@@ -301,6 +301,99 @@ Fields configuration:
 | `date` | Date picker field | Signature date, start date, etc. |
 | `checkbox` | Checkbox field | Agree to terms, opt-in selections |
 
+## Conditional (IF/THEN) Fields
+
+Any field may carry an optional `metadata` object that turns a **checkbox** into a controller
+for one or more **dependent** fields. When the checkbox's state matches the rule, the dependent
+field is shown (or unlocked) to the signer. This is a pure passthrough — the `metadata` object
+is forwarded verbatim to the backend, which owns the behaviour.
+
+**On the controlling checkbox** — give it a stable `fieldKey` so dependents can reference it:
+
+| Property | Type | Required | Description | Example |
+|----------|------|----------|-------------|---------|
+| `metadata.fieldKey` | string | ✅ (to be referenced) | Stable id for this checkbox | `"agree_terms"` |
+
+The controlling field **must** be `type: "checkbox"`.
+
+**On a dependent field** — add a `conditional` rule that points at the checkbox's `fieldKey`:
+
+| Property | Type | Required | Description | Example |
+|----------|------|----------|-------------|---------|
+| `metadata.conditional.controllingFieldKey` | string | ✅ | Must equal the controlling checkbox's `metadata.fieldKey` | `"agree_terms"` |
+| `metadata.conditional.operator` | string | ✅ | `"is_checked"` or `"is_not_checked"` | `"is_checked"` |
+| `metadata.conditional.action` | string | ✅ | `"show"` (hidden until the rule is met) or `"unlock"` (visible-but-read-only until the rule is met) | `"show"` |
+
+**Notes:**
+- The node validates the **shape** of each rule (`operator`, `action`, and a non-empty
+  `controllingFieldKey`) and fails fast with a clear error before sending — matching the
+  backend's 400. A `controllingFieldKey` that names no existing checkbox (a *dangling* reference)
+  is **allowed**: the backend fails open by design and simply ignores the rule.
+- `metadata` is entirely optional. Fields without it behave exactly as before.
+
+**Worked example — a checkbox controls a text field (`is_checked` → `show`):**
+
+The "Other reason" text field stays hidden until the signer checks the "I have a different
+reason" box.
+
+```json
+[
+  {
+    "recipientEmail": "client@example.com",
+    "type": "checkbox",
+    "template": {
+      "anchor": "{OtherReasonToggle}",
+      "placement": "replace",
+      "size": { "width": 20, "height": 20 }
+    },
+    "metadata": { "fieldKey": "other_reason_toggle" }
+  },
+  {
+    "recipientEmail": "client@example.com",
+    "type": "text",
+    "template": {
+      "anchor": "{OtherReason}",
+      "placement": "replace",
+      "size": { "width": 240, "height": 30 }
+    },
+    "metadata": {
+      "conditional": {
+        "controllingFieldKey": "other_reason_toggle",
+        "operator": "is_checked",
+        "action": "show"
+      }
+    }
+  }
+]
+```
+
+**Full IF/THEN workflow (Prepare for Signing):**
+
+```json
+{
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "turboSign",
+        "operation": "prepareForSigning",
+        "fileInputMethod": "url",
+        "fileLink": "https://my-bucket.s3.amazonaws.com/agreement.pdf",
+        "recipients": "[{\"name\":\"Client Name\",\"email\":\"client@example.com\",\"signingOrder\":1}]",
+        "fields": "[{\"recipientEmail\":\"client@example.com\",\"type\":\"checkbox\",\"template\":{\"anchor\":\"{OtherReasonToggle}\",\"placement\":\"replace\",\"size\":{\"width\":20,\"height\":20}},\"metadata\":{\"fieldKey\":\"other_reason_toggle\"}},{\"recipientEmail\":\"client@example.com\",\"type\":\"text\",\"template\":{\"anchor\":\"{OtherReason}\",\"placement\":\"replace\",\"size\":{\"width\":240,\"height\":30}},\"metadata\":{\"conditional\":{\"controllingFieldKey\":\"other_reason_toggle\",\"operator\":\"is_checked\",\"action\":\"show\"}}}]",
+        "additionalFields": {
+          "senderEmail": "sales@yourcompany.com",
+          "documentName": "Service Agreement"
+        }
+      },
+      "name": "TurboSign: Send Signature",
+      "type": "n8n-nodes-turbodocx.turboDocx",
+      "typeVersion": 1,
+      "position": [640, 300]
+    }
+  ]
+}
+```
+
 ## Recipients Reference
 
 ```json
