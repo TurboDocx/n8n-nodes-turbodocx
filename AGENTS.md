@@ -25,16 +25,14 @@ on the publish command. Both are in place; don't remove them.
 2. `package-lock.json` → both root `version` fields
 3. **`nodes/TurboDocx/shared/clientContext.ts` → `NODE_PACKAGE_VERSION`**
 4. `CHANGELOG.md` → new section
-5. `nodes/TurboDocx/TurboDocx.node.json` → `nodeVersion`
-6. `nodes/TurboDocxTrigger/TurboDocxTrigger.node.json` → `nodeVersion`
+
+Do **not** bump `nodeVersion` in the codex `*.node.json` files — it is a fixed `"1.0"`, see below.
 
 Sanity check before you commit the bump — all of these must print the same version:
 
 ```bash
 node -p "require('./package.json').version"
 grep -o "'[0-9.]*'" nodes/TurboDocx/shared/clientContext.ts | head -1
-node -p "require('./nodes/TurboDocx/TurboDocx.node.json').nodeVersion"
-node -p "require('./nodes/TurboDocxTrigger/TurboDocxTrigger.node.json').nodeVersion"
 ```
 
 Number 3 is the trap and it has already bitten once. It is a hardcoded copy of the version because
@@ -48,17 +46,20 @@ A test *cannot* currently enforce it. Reading `package.json` needs `node:fs` / `
 test outside `nodes/` does not escape it. Enforcing it means excluding test files from the
 cloud-compatibility lint, which gates n8n Cloud verification. Ask before making that trade.
 
-Numbers 5 and 6 are the **codex files**, which carry node metadata into the n8n node panel
-(categories, search aliases, documentation links). Nothing validates them: no lint rule reads
-`categories`, and a released n8n version ships a codex with a trailing space in a category name.
-So a stale `nodeVersion` here will never fail a build — it just makes the published node look
-unmaintained to anyone reading it, which matters while community-node verification is in flight.
+The **codex files** (`*.node.json`) carry node metadata into the n8n node panel (categories,
+search aliases, documentation links). Their `nodeVersion` is a **fixed schema value that must
+always be `"1.0"`** — it mirrors the node's internal `version` property (every node in
+`n8n-nodes-base` says `"1.0"`), NOT the package release. The n8n community-node review rejects any
+other value (`[LOW] Codex nodeVersion should be "1.0"`), so it is deliberately **not** in the
+version-bump list above — never bump it. `codexVersion` stays `"1.0"` too (the codex format's own
+schema version). Catch a wrong value locally with `npx @n8n/node-cli@latest lint`.
 
-One thing to know if you change these: n8n's own convention ties `nodeVersion` to the node's
-internal `version` property (every node in `n8n-nodes-base` says `"1.0"`), not to the package
-release. We deliberately track the release version instead, so it stays legible against what is
-on npm. Keep `codexVersion` at `"1.0"` — that is the schema version of the codex format and has
-nothing to do with our release.
+> History: we used to track the package release version here for legibility against npm. n8n's
+> reviewers flagged it, so as of 1.4.x both codex `nodeVersion`s are pinned to `"1.0"`.
+
+Nothing else validates the codex — no lint rule reads `categories`, and a released n8n version
+shipped a codex with a trailing space in a category name — so keep the aliases/categories tidy by
+hand.
 
 ### Before opening a release PR
 
