@@ -127,7 +127,7 @@ export class TurboDocx implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'TurboDocx',
 		name: 'turboDocx',
-		icon: 'file:turbodocx.svg',
+		icon: { light: 'file:turbodocx.svg', dark: 'file:turbodocx.dark.svg' },
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{ $parameter["operation"] === "downloadDocument" ? "Download document" : $parameter["operation"] === "getStatus" ? "Get status" : $parameter["operation"] === "getAuditTrail" ? "Get audit trail" : $parameter["operation"] === "prepareForReview" ? "Get review link" : $parameter["operation"] === "prepareForSigning" ? "Send signature" : $parameter["operation"] === "resendEmail" ? "Resend email" : $parameter["operation"] === "sendReminder" ? "Send reminder" : $parameter["operation"] === "voidDocument" ? "Void" : $parameter["resource"] + ": " + $parameter["operation"] }}',
@@ -289,7 +289,13 @@ export class TurboDocx implements INodeType {
 						});
 						continue;
 					}
-					throw error;
+					// Re-raise the already-formatted node error as a fresh NodeOperationError
+					// (the scanner's require-node-api-error rule forbids re-throwing a caught
+					// variable). Message and description are preserved verbatim.
+					throw new NodeOperationError(this.getNode(), error.message, {
+						itemIndex: i,
+						description: error.description ?? undefined,
+					});
 				}
 
 				// Handle unexpected errors (network issues, n8n-wrapped API errors)
