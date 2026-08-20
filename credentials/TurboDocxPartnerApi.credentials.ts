@@ -10,7 +10,10 @@ export class TurboDocxPartnerApi implements ICredentialType {
 	name = 'turboDocxPartnerApi';
 	displayName = 'TurboDocx Partner API';
 	documentationUrl = 'https://docs.turbodocx.com';
-	icon: Icon = 'file:../nodes/TurboDocx/turbodocx.svg';
+	icon: Icon = {
+		light: 'file:../nodes/TurboDocx/turbodocx.svg',
+		dark: 'file:../nodes/TurboDocx/turbodocx.dark.svg',
+	};
 	properties: INodeProperties[] = [
 		{
 			displayName: 'Partner API Key',
