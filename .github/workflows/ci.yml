@@ -26,3 +26,12 @@ jobs:
 
       - name: Run build
         run: 'npm run build'
+
+      # Runs n8n's official community-node scanner ruleset against the LOCAL
+      # build (source .ts + packed dist), not the published npm version. The
+      # scanner's own CLI only scans already-published packages; scripts/
+      # scan-community-package.mjs drives its exported linter over local code
+      # and exits non-zero on any violation (the CLI itself exits 0 even on
+      # failure). This gate is what n8n's community-node verification runs.
+      - name: Run n8n community-node scan
+        run: 'npm run scan'

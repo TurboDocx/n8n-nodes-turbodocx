@@ -1,0 +1,21 @@
+# n8n official community-node scan (source leg) on the working tree.
+# Runs only when node/credential sources or package.json are staged, so
+# doc-only or CI-only commits stay fast. The full source+dist scan runs in CI
+# (`npm run scan`); this hook runs the quick source-only leg (`npm run
+# scan:source`) — no build/pack needed — which catches every *error*-level
+# violation, since those live in the .ts sources.
+#
+# The scan uses local deps (no `npx` download) but still spins up ESLint, so
+# expect a few seconds. To bypass in an emergency: `git commit --no-verify`.
+#
+# This hook only fires once husky's git hooks path is configured for your
+# clone. n8n's community-node scanner forbids the `prepare` lifecycle script
+# that husky normally uses to auto-install, so run it once manually:
+#     npm run setup:hooks
+
+if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^(nodes/|credentials/|package\.json$)'; then
+	echo "Running n8n community-node scan (source)..."
+	npm run scan:source
+else
+	echo "n8n community-node scan: no node/credential/package.json changes staged, skipping."
+fi
