@@ -49,7 +49,7 @@
  *
  * See the version-bump checklist in AGENTS.md; it lists every site that must move together.
  */
-export const NODE_PACKAGE_VERSION = '1.4.0';
+export const NODE_PACKAGE_VERSION = '1.4.1';
 
 /**
  * Build the User-Agent, e.g. `@turbodocx/sdk/1.2.0 (n8n)`.
