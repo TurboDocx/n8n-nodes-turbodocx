@@ -297,9 +297,33 @@ Fields configuration:
 |------|-------------|----------|
 | `signature` | Full signature field | Primary signature area |
 | `initial` | Initial field (smaller) | Initial each page or clause |
-| `text` | Text input field | Enter names, titles, or custom text |
 | `date` | Date picker field | Signature date, start date, etc. |
+| `full_name` | Recipient's full name | Auto-filled from the recipient |
+| `first_name` | Recipient's first name | Auto-filled from the recipient |
+| `last_name` | Recipient's last name | Auto-filled from the recipient |
+| `email` | Recipient's email | Auto-filled from the recipient |
+| `title` | Recipient's job title | Auto-filled from the recipient |
+| `company` | Recipient's company | Auto-filled from the recipient |
+| `text` | Text input field | Enter names, titles, or custom text |
 | `checkbox` | Checkbox field | Agree to terms, opt-in selections |
+
+## Field Default Values
+
+Any field may carry an optional `defaultValue` to pre-fill it (max 600 characters). It is a pure
+passthrough — forwarded verbatim to the backend, which owns validation.
+
+- **Date fields** fill with the signing date by default. To pin a specific date instead, set
+  `defaultValue` to that date in `MM/DD/YYYY` (e.g. `"12/31/2026"`); omit it (or send `""`) to keep
+  the signing-date behaviour. The value must be a real calendar date — a non-existent date such as
+  `"02/31/2026"` is rejected.
+- **`signature` and `initial`** fields cannot carry a `defaultValue`, and a **`date`** field cannot
+  be `isReadonly`.
+
+```json
+[
+  {"recipientEmail": "client@example.com", "type": "date", "template": {"anchor": "{effective_date}", "placement": "replace", "width": 120, "height": 20}, "defaultValue": "12/31/2026"}
+]
+```
 
 ## Conditional (IF/THEN) Fields
 
