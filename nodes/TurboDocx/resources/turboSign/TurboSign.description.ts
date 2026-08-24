@@ -272,6 +272,165 @@ export const turboSignFields: INodeProperties[] = [
 	},
 
 	// ===============================
+	// Send Signature / Get Review Link - Reminder & Expiration Schedule
+	// ===============================
+	// Per-document schedule overrides sent when the document is prepared. Each option is optional:
+	// leave it out and that setting inherits your organization's default. Applies to both prepare
+	// paths — the backend accepts scheduleOverrides on prepare-for-review and prepare-for-signing
+	// alike, so the review flow can pre-configure the reminder/expiration cadence too.
+	{
+		displayName: 'Reminder & Expiration Schedule',
+		name: 'signatureSchedule',
+		type: 'collection',
+		placeholder: 'Add Schedule Option',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['prepareForReview', 'prepareForSigning'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Enable Expiration',
+				name: 'expirationEnabled',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether the signature request should expire automatically. Leave this option out to inherit your organization\'s default expiration policy.',
+			},
+			{
+				displayName: 'Enable Reminders',
+				name: 'remindersEnabled',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to send automatic reminder emails to outstanding signers. Leave this option out to inherit your organization\'s default reminder schedule.',
+			},
+			{
+				displayName: 'Expiration Warning',
+				name: 'expirationWarningValue',
+				type: 'number',
+				typeOptions: { minValue: 0 },
+				default: 0,
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description:
+					'How long before expiry to send a warning email (measured in Expiration Warning Unit). Set to 0 to never send a warning. Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Expiration Warning Interval',
+				name: 'expirationWarningIntervalValue',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description:
+					'How often to repeat the expiration warning (measured in Expiration Warning Interval Unit). Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Expiration Warning Interval Unit',
+				name: 'expirationWarningIntervalUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description: 'Time unit for the Expiration Warning Interval value',
+			},
+			{
+				displayName: 'Expiration Warning Unit',
+				name: 'expirationWarningUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description: 'Time unit for the Expiration Warning value',
+			},
+			{
+				displayName: 'Expire After',
+				name: 'expireAfterValue',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description:
+					'How long after sending until the request expires (measured in Expire After Unit). Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Expire After Unit',
+				name: 'expireAfterUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description: 'Time unit for the Expire After value',
+			},
+			{
+				displayName: 'Max Reminders',
+				name: 'maxReminders',
+				type: 'number',
+				typeOptions: { minValue: -1, maxValue: 50 },
+				default: -1,
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description:
+					'Maximum number of automatic reminders to send. Use -1 for unlimited, 0 to send none, up to a maximum of 50.',
+			},
+			{
+				displayName: 'Reminder Delay',
+				name: 'reminderDelayValue',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description:
+					'How long after sending before the first reminder goes out (measured in Reminder Delay Unit). Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Reminder Delay Unit',
+				name: 'reminderDelayUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description: 'Time unit for the Reminder Delay value',
+			},
+			{
+				displayName: 'Reminder Interval',
+				name: 'reminderIntervalValue',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description:
+					'How often to repeat reminders after the first one (measured in Reminder Interval Unit). Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Reminder Interval Unit',
+				name: 'reminderIntervalUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description: 'Time unit for the Reminder Interval value',
+			},
+		],
+	},
+
+	// ===============================
 	// Get Document Status Fields
 	// ===============================
 	{

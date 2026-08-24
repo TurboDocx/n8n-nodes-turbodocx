@@ -551,6 +551,167 @@ export const quoteFields: INodeProperties[] = [
 	},
 
 	// ===============================
+	// Send / Send With Deliverable / Create and Send - Reminder & Expiration Schedule
+	// ===============================
+	// Per-quote reminder/expiration overrides sent with the quote (Create and Send ends in the same
+	// send, so it carries the schedule too). Each option is optional: leave it out and that setting
+	// inherits your organization's default. NOTE the quote-specific constraint: expiry is pinned to
+	// the quote's Valid Until, so Expire After is ignored when expiration is on (Enable Expiration
+	// still applies per quote). The reminder/warning cadence applies and must fit inside Valid
+	// Until, or the backend rejects the send with a 400.
+	{
+		displayName: 'Reminder & Expiration Schedule',
+		name: 'signatureSchedule',
+		type: 'collection',
+		placeholder: 'Add Schedule Option',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: QUOTE,
+				operation: ['send', 'sendWithDeliverable', 'createAndSend'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Enable Expiration',
+				name: 'expirationEnabled',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether the quote should expire automatically. Expiry is pinned to the quote\'s Valid Until, so Expire After is ignored while this is on. Leave this option out to inherit your organization\'s default expiration policy.',
+			},
+			{
+				displayName: 'Enable Reminders',
+				name: 'remindersEnabled',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to send automatic reminder emails to the quote recipient. Leave this option out to inherit your organization\'s default reminder schedule.',
+			},
+			{
+				displayName: 'Expiration Warning',
+				name: 'expirationWarningValue',
+				type: 'number',
+				typeOptions: { minValue: 0 },
+				default: 0,
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description:
+					'How long before expiry to send a warning email (measured in Expiration Warning Unit). Must fit inside the quote\'s Valid Until. Set to 0 to never send a warning. Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Expiration Warning Interval',
+				name: 'expirationWarningIntervalValue',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description:
+					'How often to repeat the expiration warning (measured in Expiration Warning Interval Unit). Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Expiration Warning Interval Unit',
+				name: 'expirationWarningIntervalUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description: 'Time unit for the Expiration Warning Interval value',
+			},
+			{
+				displayName: 'Expiration Warning Unit',
+				name: 'expirationWarningUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description: 'Time unit for the Expiration Warning value',
+			},
+			{
+				displayName: 'Expire After',
+				name: 'expireAfterValue',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description:
+					'Ignored for quotes — expiry is pinned to the quote\'s Valid Until. Kept for parity with the signature schedule; set Valid Until on the quote instead.',
+			},
+			{
+				displayName: 'Expire After Unit',
+				name: 'expireAfterUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { expirationEnabled: [true] } },
+				description: 'Time unit for the Expire After value (ignored for quotes)',
+			},
+			{
+				displayName: 'Max Reminders',
+				name: 'maxReminders',
+				type: 'number',
+				typeOptions: { minValue: -1, maxValue: 50 },
+				default: -1,
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description:
+					'Maximum number of automatic reminders to send. Use -1 for unlimited, 0 to send none, up to a maximum of 50.',
+			},
+			{
+				displayName: 'Reminder Delay',
+				name: 'reminderDelayValue',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description:
+					'How long after sending before the first reminder goes out (measured in Reminder Delay Unit). Must fit inside the quote\'s Valid Until. Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Reminder Delay Unit',
+				name: 'reminderDelayUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description: 'Time unit for the Reminder Delay value',
+			},
+			{
+				displayName: 'Reminder Interval',
+				name: 'reminderIntervalValue',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description:
+					'How often to repeat reminders after the first one (measured in Reminder Interval Unit). Must fit inside the quote\'s Valid Until. Remove this option to inherit the organization default.',
+			},
+			{
+				displayName: 'Reminder Interval Unit',
+				name: 'reminderIntervalUnit',
+				type: 'options',
+				options: [
+					{ name: 'Hours', value: 'hours' },
+					{ name: 'Days', value: 'days' },
+				],
+				default: 'days',
+				displayOptions: { show: { remindersEnabled: [true] } },
+				description: 'Time unit for the Reminder Interval value',
+			},
+		],
+	},
+
+	// ===============================
 	// Decline — reason (sent quotes only: a draft has nowhere to store one)
 	// ===============================
 	{
