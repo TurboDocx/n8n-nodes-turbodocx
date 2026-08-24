@@ -45,11 +45,19 @@ Credential: `turboDocxApi` (apiKey + orgId). Auth headers: `Authorization: Beare
 | `download(documentId)` | GET `/turbosign/documents/{id}/download` | turboSign / `downloadDocument` | ✅ |
 | `void(documentId, reason)` | POST `/turbosign/documents/{id}/void` | turboSign / `voidDocument` | ✅ |
 | `resend(documentId, recipientIds)` | POST `/turbosign/documents/{id}/resend-email` | turboSign / `resendEmail` | ✅ |
+| `sendReminder(documentId, recipientIds?)` | POST `/turbosign/documents/{id}/send-reminder` | turboSign / `sendReminder` | ✅ |
 | `getAuditTrail(documentId)` | GET `/turbosign/documents/{id}/audit-trail` | turboSign / `getAuditTrail` | ✅ |
 
 Note: `signUrl` is a legacy **field** on the Go and Java `RecipientResponse` models, not a method —
 no node operation required. The API never populates it; signing links are emailed to recipients
 and are not returned by any endpoint.
+
+Note: the optional per-document **reminder/expiration schedule overrides** (`remindersEnabled`,
+`reminderDelay`, `reminderInterval`, `maxReminders`, `expirationEnabled`, `expireAfter`,
+`expirationWarning`, `expirationWarningInterval`) are supported on both prepare operations
+(`prepareForReview` and `prepareForSigning`) via the **Reminder & Expiration Schedule** collection,
+matching the SDK's schedule options. Each is optional and omitted when unset so the organization
+default applies.
 
 ---
 
@@ -116,6 +124,17 @@ Each POSTs `{ rows }` and returns a single partial-success `BulkImportResult`
 | `voidQuote(id, req)` | POST `/v1/quotes/{id}/void` | quote / `void` | ✅ |
 | `handleExpiredQuote(id, req)` | POST `/v1/quotes/{id}/handle-expired-sent` | quote / `handleExpired` | ✅ |
 | `createAndSend(req)` | macro (create→items→bundle→send) | quote / `createAndSend` | ✅ |
+
+Note: `send`, `sendWithDeliverable`, and the `createAndSend` macro (which ends in the same send,
+mirroring the SDK's nested `send: SendQuoteRequest`) accept the optional **reminder/expiration
+schedule overrides** (`remindersEnabled`, `reminderDelay`, `reminderInterval`, `maxReminders`,
+`expirationEnabled`, `expireAfter`, `expirationWarning`, `expirationWarningInterval`) via the
+**Reminder & Expiration Schedule** collection. These are sent FLAT on the JSON body as native
+types (durations as `{ value, unit }` objects, not the multipart JSON-strings used on the signature
+send path). Each is optional and omitted when unset so the org default applies. Quote-specific
+constraint: expiry is pinned to the quote's Valid Until, so `expireAfter` is ignored when
+`expirationEnabled` is on; the reminder/warning cadence applies and must fit inside Valid Until
+(else 400).
 
 ### Quote Line Items
 | SDK method | HTTP | n8n resource/operation | Status |

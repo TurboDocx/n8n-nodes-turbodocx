@@ -66,6 +66,30 @@ interface ITurboSignAdditionalFields {
 	ccEmails?: string;
 }
 
+/**
+ * Per-document reminder/expiration schedule collected on the prepare operations (Send Signature
+ * and Get Review Link). Every property is optional: because it is a `collection` option, a field
+ * is `undefined` until the
+ * user explicitly adds it, which is how "leave it to the org default" is distinguished from a
+ * deliberately-set value (including a meaningful `maxReminders` of 0 or -1). Durations are
+ * captured as a numeric value + an 'hours'/'days' unit and re-assembled below.
+ */
+interface ITurboSignScheduleFields {
+	remindersEnabled?: boolean;
+	maxReminders?: number;
+	reminderDelayValue?: number;
+	reminderDelayUnit?: string;
+	reminderIntervalValue?: number;
+	reminderIntervalUnit?: string;
+	expirationEnabled?: boolean;
+	expireAfterValue?: number;
+	expireAfterUnit?: string;
+	expirationWarningValue?: number;
+	expirationWarningUnit?: string;
+	expirationWarningIntervalValue?: number;
+	expirationWarningIntervalUnit?: string;
+}
+
 interface ITurboSignRequestBody extends IDataObject {
 	recipients: string;
 	fields: string;
@@ -74,6 +98,18 @@ interface ITurboSignRequestBody extends IDataObject {
 	senderName?: string;
 	senderEmail?: string;
 	ccEmails?: string;
+	// Schedule overrides. On the multipart send path the legacy formData helper only accepts
+	// string/Buffer parts, so these are all serialised to strings: booleans and maxReminders as
+	// their scalar string form, and each Duration as a JSON string of `{ value, unit }` that the
+	// backend's parseMultipartScheduleDurations middleware decodes back into an object.
+	remindersEnabled?: string;
+	maxReminders?: string;
+	reminderDelay?: string;
+	reminderInterval?: string;
+	expirationEnabled?: string;
+	expireAfter?: string;
+	expirationWarning?: string;
+	expirationWarningInterval?: string;
 	file?: {
 		value: Buffer;
 		options: {
@@ -84,6 +120,30 @@ interface ITurboSignRequestBody extends IDataObject {
 	fileLink?: string;
 	deliverableId?: string;
 	templateId?: string;
+}
+
+/**
+ * Append a schedule Duration to the multipart body as a JSON string `{ value, unit }`. The
+ * backend's parseMultipartScheduleDurations middleware JSON-parses these parts back into duration
+ * objects. Only emitted when the user actually supplied a value (the field is a `collection`
+ * option, so it reads `undefined` until added) — an unset duration is left off so it inherits the
+ * organization default.
+ *
+ * `allowZero` reflects the backend's per-field Joi rule: every window must be positive EXCEPT
+ * `expirationWarning`, where 0 is a meaningful value ("never warn"). For the others a 0 is a
+ * degenerate window and is dropped rather than sent.
+ */
+function appendDuration(
+	body: ITurboSignRequestBody,
+	key: 'reminderDelay' | 'reminderInterval' | 'expireAfter' | 'expirationWarning' | 'expirationWarningInterval',
+	value: number | undefined,
+	unit: string | undefined,
+	allowZero = false,
+): void {
+	if (typeof value !== 'number') return;
+	if (value < 0) return;
+	if (value === 0 && !allowZero) return;
+	body[key] = JSON.stringify({ value, unit: unit ?? 'days' });
 }
 
 /** Build the multipart/JSON body shared by prepareForReview and prepareForSigning. */
@@ -112,6 +172,46 @@ async function buildPrepareBody(
 	if (additionalFields.senderEmail) requestBody.senderEmail = additionalFields.senderEmail;
 	if (additionalFields.ccEmails && additionalFields.ccEmails !== '')
 		requestBody.ccEmails = additionalFields.ccEmails;
+
+	// Reminder/expiration schedule overrides. The field is scoped to both prepare operations
+	// (`prepareForReview` and `prepareForSigning`) — the backend accepts scheduleOverrides on
+	// each — and defaults to {} when the user added nothing.
+	// Each entry is appended only when the user actually configured it, mirroring the optional
+	// additionalFields above so that anything left unset inherits the organization default.
+	// Booleans and maxReminders are stringified to scalar form (the legacy multipart helper only
+	// accepts string parts); durations are JSON-encoded by appendDuration for the backend's
+	// parseMultipartScheduleDurations middleware.
+	const schedule = ctx.getNodeParameter('signatureSchedule', i, {}) as ITurboSignScheduleFields;
+
+	if (schedule.remindersEnabled !== undefined)
+		requestBody.remindersEnabled = String(schedule.remindersEnabled);
+	if (schedule.maxReminders !== undefined)
+		requestBody.maxReminders = String(schedule.maxReminders);
+	appendDuration(requestBody, 'reminderDelay', schedule.reminderDelayValue, schedule.reminderDelayUnit);
+	appendDuration(
+		requestBody,
+		'reminderInterval',
+		schedule.reminderIntervalValue,
+		schedule.reminderIntervalUnit,
+	);
+
+	if (schedule.expirationEnabled !== undefined)
+		requestBody.expirationEnabled = String(schedule.expirationEnabled);
+	appendDuration(requestBody, 'expireAfter', schedule.expireAfterValue, schedule.expireAfterUnit);
+	// expirationWarning permits 0 ("never warn") — the only duration the backend accepts as zero.
+	appendDuration(
+		requestBody,
+		'expirationWarning',
+		schedule.expirationWarningValue,
+		schedule.expirationWarningUnit,
+		true,
+	);
+	appendDuration(
+		requestBody,
+		'expirationWarningInterval',
+		schedule.expirationWarningIntervalValue,
+		schedule.expirationWarningIntervalUnit,
+	);
 
 	if (fileInputMethod === 'upload') {
 		const pdfFileProp = ctx.getNodeParameter('pdfFile', i) as string;

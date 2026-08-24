@@ -35,6 +35,91 @@ function parseCcEmails(raw: string): string[] {
 		.filter((e) => e !== '');
 }
 
+/**
+ * Per-quote reminder/expiration schedule collected on the Send / Send With Deliverable operations.
+ * Every property is optional: because it is a `collection` option, a field reads `undefined` until
+ * the user adds it, which distinguishes "inherit the org default" from a deliberately-set value
+ * (including a meaningful `maxReminders` of 0 or -1, or `expirationWarning` of 0). Durations are
+ * captured as a numeric value + an 'hours'/'days' unit and re-assembled into `{ value, unit }`.
+ */
+interface IQuoteScheduleFields {
+	remindersEnabled?: boolean;
+	maxReminders?: number;
+	reminderDelayValue?: number;
+	reminderDelayUnit?: string;
+	reminderIntervalValue?: number;
+	reminderIntervalUnit?: string;
+	expirationEnabled?: boolean;
+	expireAfterValue?: number;
+	expireAfterUnit?: string;
+	expirationWarningValue?: number;
+	expirationWarningUnit?: string;
+	expirationWarningIntervalValue?: number;
+	expirationWarningIntervalUnit?: string;
+}
+
+/**
+ * Append a schedule Duration to the quote's JSON body as a native `{ value, unit }` OBJECT (the
+ * quote-send endpoints are application/json, unlike the multipart signature-send path — so no
+ * JSON.stringify here). Only emitted when the user actually supplied a value.
+ *
+ * `allowZero` mirrors the backend's per-field rule: every window must be positive EXCEPT
+ * `expirationWarning`, where 0 is meaningful ("never warn"). A 0 on any other duration is a
+ * degenerate window and is dropped rather than sent.
+ */
+function appendQuoteDuration(
+	body: IDataObject,
+	key: 'reminderDelay' | 'reminderInterval' | 'expireAfter' | 'expirationWarning' | 'expirationWarningInterval',
+	value: number | undefined,
+	unit: string | undefined,
+	allowZero = false,
+): void {
+	if (typeof value !== 'number') return;
+	if (value < 0) return;
+	if (value === 0 && !allowZero) return;
+	body[key] = { value, unit: unit ?? 'days' };
+}
+
+/**
+ * Merge the optional quote-send reminder/expiration schedule into a JSON send body. Native types
+ * throughout: booleans as booleans, `maxReminders` as a number, durations as `{ value, unit }`
+ * objects. Each field is added only when the user set it, so anything left unset inherits the org
+ * default. Quote-specific constraint: expiry is pinned to the quote's `validUntil`, so the backend
+ * ignores `expireAfter` when expiration is on; `expirationEnabled` still applies per quote, and the
+ * reminder/warning cadence must fit inside `validUntil` or the send is rejected with a 400.
+ */
+function applyQuoteSchedule(ctx: IExecuteFunctions, body: IDataObject, i: number): void {
+	const schedule = ctx.getNodeParameter('signatureSchedule', i, {}) as IQuoteScheduleFields;
+
+	if (schedule.remindersEnabled !== undefined) body.remindersEnabled = schedule.remindersEnabled;
+	if (schedule.maxReminders !== undefined) body.maxReminders = schedule.maxReminders;
+	appendQuoteDuration(body, 'reminderDelay', schedule.reminderDelayValue, schedule.reminderDelayUnit);
+	appendQuoteDuration(
+		body,
+		'reminderInterval',
+		schedule.reminderIntervalValue,
+		schedule.reminderIntervalUnit,
+	);
+
+	if (schedule.expirationEnabled !== undefined) body.expirationEnabled = schedule.expirationEnabled;
+	// expireAfter is ignored by the quote backend (expiry follows validUntil) but is forwarded for
+	// parity; expirationWarning permits 0 ("never warn"), the only duration accepted as zero.
+	appendQuoteDuration(body, 'expireAfter', schedule.expireAfterValue, schedule.expireAfterUnit);
+	appendQuoteDuration(
+		body,
+		'expirationWarning',
+		schedule.expirationWarningValue,
+		schedule.expirationWarningUnit,
+		true,
+	);
+	appendQuoteDuration(
+		body,
+		'expirationWarningInterval',
+		schedule.expirationWarningIntervalValue,
+		schedule.expirationWarningIntervalUnit,
+	);
+}
+
 // ===================================================================
 // Quote resource
 // ===================================================================
@@ -214,6 +299,7 @@ async function executeQuoteResource(
 		if (sendOptions.ccEmails && sendOptions.ccEmails !== '')
 			body.ccEmails = parseCcEmails(sendOptions.ccEmails as string);
 		if (sendOptions.validUntil) body.validUntil = sendOptions.validUntil;
+		applyQuoteSchedule(ctx, body, i);
 
 		const result = await turboDocxApiRequest(
 			ctx,
@@ -232,6 +318,7 @@ async function executeQuoteResource(
 		const body: IDataObject = { deliverableId, mergePosition };
 		if (sendOptions.ccEmails && sendOptions.ccEmails !== '')
 			body.ccEmails = parseCcEmails(sendOptions.ccEmails as string);
+		applyQuoteSchedule(ctx, body, i);
 
 		const result = await turboDocxApiRequest(
 			ctx,
@@ -348,11 +435,13 @@ async function executeQuoteResource(
 			);
 		}
 
-		// 4) Send the quote.
+		// 4) Send the quote. The macro ends in the same send endpoint, so it carries the optional
+		// reminder/expiration schedule too (mirrors the SDK's nested `send: SendQuoteRequest`).
 		const sendBody: IDataObject = {};
 		if (fields.ccEmails && fields.ccEmails !== '')
 			sendBody.ccEmails = parseCcEmails(fields.ccEmails as string);
 		if (fields.sendValidUntil) sendBody.validUntil = fields.sendValidUntil;
+		applyQuoteSchedule(ctx, sendBody, i);
 
 		const sent = await turboDocxApiRequest(
 			ctx,

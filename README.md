@@ -70,12 +70,15 @@ npm install @turbodocx/n8n-nodes-turbodocx
 |-----------|-------------|----------|
 | **Prepare for Review** | Upload a document with signature fields and get a preview URL. No emails sent. | Preview field placement before sending to clients |
 | **Prepare for Signing** | Upload a document and automatically send signature requests to all recipients | Send employment agreements, contracts, NDAs for signature |
-| **Get Document Status** | Check the document-level status (draft, pending, completed, voided) | Verify all parties have signed before next step |
+| **Get Document Status** | Check the document-level status (draft, under_review, completed, voided, expired) | Verify all parties have signed before next step |
 | **Get Recipients** | Every recipient with their signing status, email history, and who sent the document | Chase the exact people you're still waiting on, not the whole list |
 | **Download Document** | Download the final signed PDF | Archive to cloud storage or send to accounting |
 | **Void Document** | Cancel a signature request and invalidate all links | Deal falls through, need to cancel request |
-| **Resend Email** | Resend signature request to recipients who haven't signed | Send reminders after 3 days |
+| **Resend Email** | Resend the signature request to recipients who haven't signed | Recipient lost or never received the original signing email |
+| **Send Reminder** | Nudge a document's outstanding signers — a standalone reminder that ignores the automatic cadence and cap | Chase signers outside the normal reminder rhythm |
 | **Get Audit Trail** | Fetch the full signing audit trail for a document | Compliance evidence of who viewed/signed and when |
+
+**Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 
 **Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.)
 
@@ -107,6 +110,8 @@ Full CPQ surface, modelled as several resources for an intuitive UX:
 | **Contact** | Get Many, Bulk Create, Create, Update, Delete |
 | **Quote Template** | Get Many, Get Default, Get, Create, Update, Delete |
 | **Quote Type** | Get Many, Bulk Create, Create, Update, Delete |
+
+**Reminder & Expiration Schedule (quote Send / Send With Deliverable / Create and Send)**: these send operations accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, cap) plus per-quote expiration and its warning cadence. Leave any field out to inherit your organization's defaults. Quote constraint: expiry is pinned to the quote's Valid Until (so Expire After is ignored while expiration is on), and the reminder/warning cadence must fit inside Valid Until or the send is rejected.
 
 ### Webhooks
 
