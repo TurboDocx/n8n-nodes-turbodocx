@@ -126,9 +126,10 @@ export function buildApiError(
 		}
 	}
 
-	const obj = typeof errorBody === 'object' && errorBody !== null
-		? (errorBody as Record<string, unknown>)
-		: null;
+	const obj =
+		typeof errorBody === 'object' && errorBody !== null
+			? (errorBody as Record<string, unknown>)
+			: null;
 
 	// The `error` field may be a nested object `{ message, code }` (TurboQuote) rather
 	// than a string. Capture it so we read its message instead of stringifying "[object Object]".
@@ -139,11 +140,11 @@ export function buildApiError(
 
 	let errorMessage = 'Request failed';
 	const errorCode = obj
-		? ((obj.type as string) ||
+		? (obj.type as string) ||
 			(obj.code as string) ||
 			(nestedError?.code as string) ||
 			stringErrorCode(obj) ||
-			'')
+			''
 		: '';
 
 	if (
@@ -247,12 +248,15 @@ function assertOk(ctx: IExecuteFunctions, response: FullResponse, itemIndex: num
  * and TurboQuote single-entity endpoints add a second `{ result }` layer. These modes
  * mirror the SDK's `smartUnwrap` so n8n items carry the meaningful payload, not the envelope.
  *
- * - `none`   raw body (default — preserves the original TurboSign output shape)
- * - `smart`  strip `{ data }` only when it is the sole key (SDK smartUnwrap)
- * - `data`   take `.data` even alongside siblings like `message` (webhook POST/PATCH)
- * - `result` smart-unwrap, then take `.result` (TurboQuote single-entity double-unwrap)
+ * - `none`    raw body (default — preserves the original TurboSign output shape)
+ * - `smart`   strip `{ data }` only when it is the sole key (SDK smartUnwrap)
+ * - `data`    take `.data` even alongside siblings like `message` (webhook POST/PATCH)
+ * - `result`  smart-unwrap, then take `.result` (TurboQuote single-entity double-unwrap)
+ * - `results` smart-unwrap, then take `.results` (TurboSign embedded signing-url /
+ *             settings, which reply `{ data: { results } }`; mirrors the SDK's manual
+ *             `response.results` unwrap for those endpoints)
  */
-export type UnwrapMode = 'none' | 'smart' | 'data' | 'result';
+export type UnwrapMode = 'none' | 'smart' | 'data' | 'result' | 'results';
 
 export function applyUnwrap(body: IDataObject, mode: UnwrapMode = 'none'): IDataObject {
 	if (mode === 'none') return body;
@@ -271,6 +275,10 @@ export function applyUnwrap(body: IDataObject, mode: UnwrapMode = 'none'): IData
 
 	if (mode === 'result' && result && typeof result === 'object' && !Array.isArray(result)) {
 		if ('result' in result) return result.result as IDataObject;
+	}
+
+	if (mode === 'results' && result && typeof result === 'object' && !Array.isArray(result)) {
+		if ('results' in result) return result.results as IDataObject;
 	}
 
 	return result;
@@ -404,7 +412,13 @@ export async function paginatedList(
 		const limit = ctx.getNodeParameter('limit', i, 50) as number;
 		const page = await turboDocxApiRequest(
 			ctx,
-			{ method: 'GET', endpoint, qs: { ...baseQs, limit, offset: 0 }, unwrap, credentialName: options.credentialName },
+			{
+				method: 'GET',
+				endpoint,
+				qs: { ...baseQs, limit, offset: 0 },
+				unwrap,
+				credentialName: options.credentialName,
+			},
 			i,
 		);
 		return ((page.results as IDataObject[]) ?? []).slice();
@@ -415,7 +429,13 @@ export async function paginatedList(
 	while (hasMore) {
 		const page = await turboDocxApiRequest(
 			ctx,
-			{ method: 'GET', endpoint, qs: { ...baseQs, limit: pageSize, offset }, unwrap, credentialName: options.credentialName },
+			{
+				method: 'GET',
+				endpoint,
+				qs: { ...baseQs, limit: pageSize, offset },
+				unwrap,
+				credentialName: options.credentialName,
+			},
 			i,
 		);
 		const results = (page.results as IDataObject[]) ?? [];
@@ -499,9 +519,11 @@ export async function fetchPresignedUrl(
  * into a NodeOperationError with the best message we can extract. Mirrors the
  * original monolith's outer-catch behaviour so error output stays stable.
  */
-export function normalizeUnexpectedError(
-	error: unknown,
-): { message: string; code: string; statusCode: number } {
+export function normalizeUnexpectedError(error: unknown): {
+	message: string;
+	code: string;
+	statusCode: number;
+} {
 	const errorObj = error as {
 		httpCode?: number;
 		statusCode?: number;
@@ -541,8 +563,8 @@ export function normalizeUnexpectedError(
 			? (backendResponse.error as Record<string, unknown>)
 			: null;
 	const apiErrorMessage = nestedError
-		? ((nestedError.message as string) || JSON.stringify(nestedError))
-		: ((backendResponse?.message as string) || (backendResponse?.error as string));
+		? (nestedError.message as string) || JSON.stringify(nestedError)
+		: (backendResponse?.message as string) || (backendResponse?.error as string);
 	const apiErrorCode =
 		(backendResponse?.code as string) ||
 		(nestedError?.code as string) ||
@@ -579,7 +601,13 @@ export function normalizeUnexpectedError(
  * sensible filename + MIME type. Mirrors the SDK's `detectFileType`.
  */
 export function detectBinaryType(buffer: Buffer): { extension: string; mimeType: string } {
-	if (buffer.length >= 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+	if (
+		buffer.length >= 4 &&
+		buffer[0] === 0x25 &&
+		buffer[1] === 0x50 &&
+		buffer[2] === 0x44 &&
+		buffer[3] === 0x46
+	) {
 		return { extension: 'pdf', mimeType: 'application/pdf' };
 	}
 	if (buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4b) {

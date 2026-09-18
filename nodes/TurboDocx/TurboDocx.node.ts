@@ -130,7 +130,8 @@ export class TurboDocx implements INodeType {
 		icon: 'file:turbodocx.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{ $parameter["operation"] === "downloadDocument" ? "Download document" : $parameter["operation"] === "getStatus" ? "Get status" : $parameter["operation"] === "getAuditTrail" ? "Get audit trail" : $parameter["operation"] === "prepareForReview" ? "Get review link" : $parameter["operation"] === "prepareForSigning" ? "Send signature" : $parameter["operation"] === "resendEmail" ? "Resend email" : $parameter["operation"] === "sendReminder" ? "Send reminder" : $parameter["operation"] === "voidDocument" ? "Void" : $parameter["resource"] + ": " + $parameter["operation"] }}',
+		subtitle:
+			'={{ $parameter["operation"] === "downloadDocument" ? "Download document" : $parameter["operation"] === "getStatus" ? "Get status" : $parameter["operation"] === "getAuditTrail" ? "Get audit trail" : $parameter["operation"] === "prepareForReview" ? "Get review link" : $parameter["operation"] === "prepareForSigning" ? "Send signature" : $parameter["operation"] === "resendEmail" ? "Resend email" : $parameter["operation"] === "sendReminder" ? "Send reminder" : $parameter["operation"] === "voidDocument" ? "Void" : $parameter["operation"] === "createSigningUrl" ? "Create signing URL" : $parameter["operation"] === "createEmbeddedSignature" ? "Create embedded signature" : $parameter["operation"] === "getEmbeddedSigningSettings" ? "Get embedded signing settings" : $parameter["resource"] + ": " + $parameter["operation"] }}',
 		description:
 			'Interact with TurboDocx for document generation, e-signatures (TurboSign), quotes (TurboQuote), partner management, and webhooks',
 		defaults: {
@@ -264,9 +265,7 @@ export class TurboDocx implements INodeType {
 
 				// Stamp item linkage so downstream nodes can resolve paired-item
 				// expressions, including 1→N fan-out outputs (list/getAll).
-				returnData.push(
-					...result.map((r) => ({ ...r, pairedItem: r.pairedItem ?? { item: i } })),
-				);
+				returnData.push(...result.map((r) => ({ ...r, pairedItem: r.pairedItem ?? { item: i } })));
 			} catch (error) {
 				// Re-throw NodeOperationError as-is (already formatted)
 				if (error instanceof NodeOperationError) {
