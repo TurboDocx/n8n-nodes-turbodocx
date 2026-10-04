@@ -448,8 +448,11 @@ export async function executeTurboSign(
 		return [{ json: result }];
 	}
 
-	// Mint a single-use embedded signing URL for one recipient of an already-sent document.
-	// The endpoint replies `{ data: { results } }`, so unwrap to `results` (mirrors the SDK).
+	// Get the embedded signing URL for one recipient of an already-sent document: single-use for
+	// external_idv / override, the reusable signing link for otp / no-verification recipients (whose
+	// `expiresAt` is the document's expiry, or null). The endpoint replies `{ data: { results } }`,
+	// so unwrap to `results` (mirrors the SDK). The body carries only the keys the endpoint's schema
+	// accepts (recipientId | externalId, returnUrl, identityAssertion); unknown keys are rejected.
 	// `pendingChecks` (e.g. email_otp / sms_otp) tells the workflow the signer must clear an OTP
 	// in the browser before signing — the org API key does NOT verify the OTP on their behalf.
 	if (operation === 'createSigningUrl') {

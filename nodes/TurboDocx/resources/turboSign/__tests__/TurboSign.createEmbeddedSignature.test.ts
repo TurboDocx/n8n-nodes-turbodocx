@@ -313,4 +313,32 @@ describe('TurboSign createEmbeddedSignature', () => {
 		// The document was already sent — the error must name the documentId so it isn't lost.
 		await expect(TurboDocx.prototype.execute.call(ctx)).rejects.toThrow(/documentId doc-9/);
 	});
+
+	it('sends only the signing-url schema keys when minting (senderName stays on the send)', async () => {
+		// The signing-url body schema rejects unknown keys (senderName included): the audit "via" is
+		// the calling API key. senderName belongs on prepare-for-signing only.
+		const { http, capture } = makeHttp({ 'rec-1': readyMint('https://embed/rec1') });
+		const ctx = makeExecuteCtx({
+			itemCount: 1,
+			params: {
+				resource: 'turboSign',
+				operation: 'createEmbeddedSignature',
+				fileInputMethod: 'url',
+				fileLink: 'https://example.com/contract.pdf',
+				embeddedRecipients: {
+					recipient: [{ name: 'John Doe', email: 'john@example.com', signature: '{signature1}' }],
+				},
+				embeddedReturnUrl: 'https://app.example.com/signed',
+				additionalFields: { senderName: 'Acme Sales', senderEmail: 'sales@acme.com' },
+			},
+			http,
+		});
+
+		await TurboDocx.prototype.execute.call(ctx);
+
+		expect(capture.sendBody!.senderName).toBe('Acme Sales');
+		expect(capture.mintBodies).toEqual([
+			{ recipientId: 'rec-1', returnUrl: 'https://app.example.com/signed' },
+		]);
+	});
 });

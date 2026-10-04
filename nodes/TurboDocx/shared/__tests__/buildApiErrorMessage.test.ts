@@ -121,4 +121,32 @@ describe('buildApiError', () => {
 		expect(msg).toContain('QuoteHasNoLineItems');
 		expect(msg).toContain('HTTP Status: 400');
 	});
+
+	describe('TurboSign identity / OTP errors', () => {
+		// The backend sends one envelope for these: { message, type, error, code } with type === code.
+		const envelope = (code: string, message: string) => ({ message, type: code, error: message, code });
+
+		it.each([
+			['OtpOverrideNotAllowed', 'This organization requires email verification for every request.', 403],
+			['OtpPhoneInvalid', 'The phone number for jane@example.com is not a valid number.', 400],
+		])('renders %s readably with its code', (code, message, status) => {
+			const parts = buildApiError(envelope(code, message), status);
+
+			expect(parts.message).toBe(`${message} [${code}]`);
+			expect(parts.code).toBe(code);
+			expect(parts.statusCode).toBe(status);
+		});
+
+		it('renders the 423 passcode lockout readably', () => {
+			const parts = buildApiError(
+				{ error: 'Too many incorrect codes. Ask the sender to resend the signing request.', code: 'locked' },
+				423,
+			);
+
+			expect(parts.message).toBe(
+				'Too many incorrect codes. Ask the sender to resend the signing request. [locked]',
+			);
+			expect(parts.statusCode).toBe(423);
+		});
+	});
 });

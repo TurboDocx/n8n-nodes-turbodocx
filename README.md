@@ -76,9 +76,9 @@ npm install @turbodocx/n8n-nodes-turbodocx
 | **Void Document** | Cancel a signature request and invalidate all links | Deal falls through, need to cancel request |
 | **Resend Email** | Resend signature request to recipients who haven't signed | Send reminders after 3 days |
 | **Get Audit Trail** | Fetch the full signing audit trail for a document | Compliance evidence of who viewed/signed and when |
-| **Create Signing URL** | Mint a single-use embedded signing URL for one recipient of an already-sent document | Embed signing in your own app / iframe; carry the signer to the document in-context |
+| **Create Signing URL** | Get the embedded signing URL for one recipient of an already-sent document (single-use for external IDV and override; the reusable signing link for otp and no-verification recipients) | Embed signing in your own app / iframe; carry the signer to the document in-context |
 | **Create Embedded Signature** | Send a document AND mint a per-recipient embed URL in one call, with optional per-recipient email/SMS OTP or identity verification | In-app or in-person (kiosk) signing where the host owns the UX; returns one embed URL per signer |
-| **Get Embedded Signing Settings** | Read the org-wide embedded-signing gates (enabled, external IDV allowed, override allowed, allowed frame ancestors) | Check what embedded signing is permitted before requesting signing URLs |
+| **Get Embedded Signing Settings** | Read the org-wide embedded-signing gates (enabled, external IDV allowed, override allowed, default OTP channel, `allowChannelOverride`, allowed frame ancestors; an empty list denies framing everywhere) | Check what embedded signing is permitted before requesting signing URLs |
 
 **Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.)
 

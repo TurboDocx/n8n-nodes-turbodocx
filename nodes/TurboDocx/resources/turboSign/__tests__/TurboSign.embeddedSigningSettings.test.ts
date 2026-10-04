@@ -13,6 +13,7 @@ describe('TurboSign getEmbeddedSigningSettings', () => {
 		allowExternalIdv: false,
 		allowIdentityOverride: false,
 		defaultChannel: 'email',
+		allowChannelOverride: false,
 		allowedFrameAncestors: ['https://app.example.com'],
 	};
 
@@ -33,6 +34,8 @@ describe('TurboSign getEmbeddedSigningSettings', () => {
 		expect(items[0].json).not.toHaveProperty('data');
 		expect(items[0].json).toEqual(RESULTS);
 		expect(items[0].json.enabled).toBe(true);
+		// Passed through untouched: false means the org locked the channel (OtpOverrideNotAllowed).
+		expect(items[0].json.allowChannelOverride).toBe(false);
 		expect(items[0].json.allowedFrameAncestors).toEqual(['https://app.example.com']);
 	});
 });

@@ -25,7 +25,7 @@ export const turboSignOperations: INodeProperties[] = [
 				name: 'Create Signing URL',
 				value: 'createSigningUrl',
 				description:
-					'Mint a single-use embedded signing URL for one recipient of an already-sent document',
+					'Get the embedded signing URL for one recipient of an already-sent document. External IDV and override links are single-use; otp and no-verification recipients get their reusable signing link.',
 				action: 'Create a signing URL',
 			},
 			{
@@ -44,7 +44,7 @@ export const turboSignOperations: INodeProperties[] = [
 				name: 'Get Embedded Signing Settings',
 				value: 'getEmbeddedSigningSettings',
 				description:
-					'Read the org-wide embedded-signing gates (enabled, external IDV allowed, override allowed, default OTP channel, allowed frame ancestors)',
+					'Read the org-wide embedded-signing gates: enabled, external IDV allowed, override allowed, default OTP channel, allowChannelOverride (false means a different channel is rejected with OtpOverrideNotAllowed), and allowed frame ancestors (empty denies framing everywhere)',
 				action: 'Get embedded signing settings',
 			},
 			{
@@ -446,9 +446,9 @@ export const turboSignFields: INodeProperties[] = [
 				type: 'json',
 				default: '',
 				description:
-					'Only for external_idv recipients: the assertion from your own identity provider. JSON object with provider, verificationId, verifiedAt (ISO 8601), and subjectEmail (must match the recipient email).',
+					'Only for external_idv recipients: the assertion from your own identity provider. JSON object with provider, verificationId, verifiedAt (ISO 8601) and subjectEmail (must match the recipient email unless overrideEmailMatching is true). Optional audit-trail context: method (id_document, id_document_liveness, kba, database, sso or other, which needs methodDetail), assuranceLevel, verifiedName and an https evidenceUrl.',
 				placeholder:
-					'{"provider":"CAPA","verificationId":"ver_123","verifiedAt":"2026-01-01T00:00:00.000Z","subjectEmail":"john@example.com"}',
+					'{"provider":"ExampleIDV","verificationId":"ver_123","verifiedAt":"2026-01-01T00:00:00.000Z","subjectEmail":"john@example.com"}',
 			},
 		],
 	},
@@ -459,7 +459,7 @@ export const turboSignFields: INodeProperties[] = [
 	// Recipients are entered as structured rows (not raw JSON) so the identity/OTP options are
 	// first-class in the UI. Each row maps to a full recipient with an optional identityVerification
 	// block; the signer clears any OTP in the browser on the signing page (the org API key cannot
-	// verify an OTP on their behalf — see the handler).
+	// verify an OTP on their behalf; see the handler).
 	{
 		displayName: 'Recipients',
 		name: 'embeddedRecipients',
@@ -511,24 +511,25 @@ export const turboSignFields: INodeProperties[] = [
 						type: 'options',
 						default: 'none',
 						description:
-							'How this recipient proves their identity before signing. OTP, external IDV and override each require embedded signing (and the matching gate) to be enabled for the org.',
+							"How this recipient proves their identity before signing. OTP, external IDV and override each require embedded signing (and the matching gate) to be enabled for the org. Get Embedded Signing Settings shows the org's default channel and whether you may pick a different one.",
 						options: [
 							{
 								name: 'Email OTP',
 								value: 'emailOtp',
 								description:
-									'One-time passcode emailed to the recipient and entered on the signing page',
+									"One-time passcode emailed to the recipient and entered on the signing page. Rejected with OtpOverrideNotAllowed when the org's default channel is SMS and allowChannelOverride is false.",
 							},
 							{
 								name: 'External IDV',
 								value: 'externalIdv',
 								description:
-									'Your own identity provider verifies the signer. The embed URL is NOT minted here — this recipient comes back status:pending, then you mint it with Create Signing URL, passing the identity assertion.',
+									'Your own identity provider verifies the signer. The embed URL is NOT minted here: this recipient comes back status:pending, then you mint it with Create Signing URL, passing the identity assertion.',
 							},
 							{
 								name: 'None',
 								value: 'none',
-								description: 'No identity verification',
+								description:
+									"Take the org's default channel: no verification when it is none, otherwise a passcode on the default channel (email, or SMS, which needs a phone number)",
 							},
 							{
 								name: 'Override',
@@ -539,7 +540,8 @@ export const turboSignFields: INodeProperties[] = [
 							{
 								name: 'SMS OTP',
 								value: 'smsOtp',
-								description: 'One-time passcode texted to the recipient (requires a phone number)',
+								description:
+									"One-time passcode texted to the recipient (requires a phone number). Rejected with OtpOverrideNotAllowed when the org's default channel is email and allowChannelOverride is false.",
 							},
 						],
 					},
@@ -581,7 +583,8 @@ export const turboSignFields: INodeProperties[] = [
 						type: 'string',
 						default: '',
 						placeholder: '+13055551234',
-						description: 'Required for SMS OTP. E.164 format, e.g. +13055551234.',
+						description:
+							"Required for SMS OTP, and for None when the org's default channel is SMS. E.164 format, e.g. +13055551234. A number that cannot exist is rejected with OtpPhoneInvalid.",
 					},
 					{
 						displayName: 'Signature Anchor',
@@ -632,7 +635,7 @@ export const turboSignFields: INodeProperties[] = [
 			},
 		},
 		description:
-			'Whether to also email recipients a standalone signing link. Off by default for embedded signing — the host owns the signing UX via the returned embed URLs.',
+			'Whether to also email recipients a standalone signing link. Off by default for embedded signing, where your app shows the signing page via the returned embed URLs. When off, the signing-link, initial CC, next-signer, automatic reminder and expiry-warning emails are not sent; passcode and completed-copy emails still are, and a manual Resend Email or Send Reminder still sends.',
 	},
 	{
 		displayName: 'Return URL',
