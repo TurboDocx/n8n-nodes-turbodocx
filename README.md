@@ -330,6 +330,27 @@ passthrough — forwarded verbatim to the backend, which owns validation.
 ]
 ```
 
+## Optional Fields
+
+Every field is required unless you say otherwise. Set `"required": false` on a field to let the
+signer leave it blank; the signing page marks it **Optional**. Leaving `required` out (or sending
+`null`) keeps the field required. Like `defaultValue`, the flag is forwarded verbatim and the
+backend validates it:
+
+- **`signature` and `initial`** fields are always required. `"required": false` on them is rejected.
+- `required` must be a boolean. Any other value is rejected.
+- Each recipient needs **at least one required field they can fill in**. A recipient whose fields
+  are all optional or `isReadonly` is rejected.
+- An `isReadonly` field can also be optional. It is pre-filled and the signer can't change it, so
+  it never holds up signing either way.
+
+```json
+[
+  {"recipientEmail": "client@example.com", "type": "signature", "template": {"anchor": "{client_sig}", "placement": "replace", "width": 180, "height": 50}},
+  {"recipientEmail": "client@example.com", "type": "text", "required": false, "template": {"anchor": "{notes}", "placement": "replace", "width": 240, "height": 30}}
+]
+```
+
 ## Conditional (IF/THEN) Fields
 
 Any field may carry an optional `metadata` object that turns a **checkbox** into a controller
