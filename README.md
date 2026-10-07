@@ -77,6 +77,9 @@ npm install @turbodocx/n8n-nodes-turbodocx
 | **Resend Email** | Resend the signature request to recipients who haven't signed | Recipient lost or never received the original signing email |
 | **Send Reminder** | Nudge a document's outstanding signers — a standalone reminder that ignores the automatic cadence and cap | Chase signers outside the normal reminder rhythm |
 | **Get Audit Trail** | Fetch the full signing audit trail for a document | Compliance evidence of who viewed/signed and when |
+| **Create Signing URL** | Get the embedded signing URL for one recipient of an already-sent document (single-use for external IDV and override; the reusable signing link for otp and no-verification recipients) | Embed signing in your own app / iframe; carry the signer to the document in-context |
+| **Create Embedded Signature** | Send a document AND mint a per-recipient embed URL in one call, with optional per-recipient email/SMS OTP or identity verification | In-app or in-person (kiosk) signing where the host owns the UX; returns one embed URL per signer |
+| **Get Embedded Signing Settings** | Read the org-wide embedded-signing gates (enabled, external IDV allowed, override allowed, default OTP channel, `allowChannelOverride`, allowed frame ancestors; an empty list denies framing everywhere) | Check what embedded signing is permitted before requesting signing URLs |
 
 **Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 

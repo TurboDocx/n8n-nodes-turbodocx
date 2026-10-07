@@ -17,13 +17,13 @@ Baseline captured at: SDK `@turbodocx/sdk@0.4.0`, node `@turbodocx/n8n-nodes-tur
 
 | SDK Module | SDK callable methods | Covered in node (v1.2.0) | Gap |
 |---|---:|---:|---|
-| TurboSign (`sign.ts`) | 8 | 8 | none |
+| TurboSign (`sign.ts`) | 11 | 11 | none |
 | Deliverable (`deliverable.ts`) | 7 | 7 | none |
 | TurboQuote (`quote.ts`) | 68 | 68 | none |
 | TurboPartner (`partner.ts`) | 27 | 27 | none (uses 2nd credential) |
 | TurboWebhooks (`webhooks.ts`) | 10 + `verifyWebhookSignature` | 10 + helper | none |
 
-**Full method parity: 120/120 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
+**Full method parity: 123/123 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
 Zero gaps, zero strays.** The only SDK surface intentionally not wrapped is the set of
 [Deliberate Exclusions](#deliberate-exclusions) — helpers, low-level primitives, and
 convenience overloads that have no idiomatic n8n mapping.
@@ -47,6 +47,17 @@ Credential: `turboDocxApi` (apiKey + orgId). Auth headers: `Authorization: Beare
 | `resend(documentId, recipientIds)` | POST `/turbosign/documents/{id}/resend-email` | turboSign / `resendEmail` | ✅ |
 | `sendReminder(documentId, recipientIds?)` | POST `/turbosign/documents/{id}/send-reminder` | turboSign / `sendReminder` | ✅ |
 | `getAuditTrail(documentId)` | GET `/turbosign/documents/{id}/audit-trail` | turboSign / `getAuditTrail` | ✅ |
+| `createSigningUrl(documentId, req)` | POST `/turbosign/documents/{id}/signing-url` | turboSign / `createSigningUrl` | ✅ |
+| `getEmbeddedSigningSettings()` | GET `/turbosign/embedded-signing-settings` | turboSign / `getEmbeddedSigningSettings` | ✅ |
+| `createEmbeddedSignature(req)` | POST `/turbosign/single/prepare-for-signing` + per-recipient POST `/turbosign/documents/{id}/signing-url` | turboSign / `createEmbeddedSignature` | ✅ |
+
+The last three are the embedded-signing / identity-verification surface. `createSigningUrl` and
+`getEmbeddedSigningSettings` reply `{ data: { results } }` and are unwrapped to `results` (the
+`unwrap: 'results'` mode). `createEmbeddedSignature` is a two-phase macro (send, then mint one embed
+URL per recipient in signing order); it is turn-aware, degrading a not-in-turn / already-signed
+signer to `embedUrl: null` + a `pending` / `completed` status instead of failing the whole call. Any
+OTP is entered by the signer in the browser — the org API key configures the channel and reports the
+pending `pendingChecks` step; it does not verify the OTP on the recipient's behalf.
 
 Note: `signUrl` is a legacy **field** on the Go and Java `RecipientResponse` models, not a method —
 no node operation required. The API never populates it; signing links are emailed to recipients

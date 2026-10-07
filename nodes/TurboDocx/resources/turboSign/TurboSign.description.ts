@@ -15,6 +15,20 @@ export const turboSignOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Create Embedded Signature',
+				value: 'createEmbeddedSignature',
+				description:
+					'Send a document AND mint a per-recipient embedded signing URL in one call (in-app / iframe signing), with optional per-recipient OTP or identity verification',
+				action: 'Create an embedded signature',
+			},
+			{
+				name: 'Create Signing URL',
+				value: 'createSigningUrl',
+				description:
+					'Get the embedded signing URL for one recipient of an already-sent document. External IDV and override links are single-use; otp and no-verification recipients get their reusable signing link.',
+				action: 'Create a signing URL',
+			},
+			{
 				name: 'Download Document',
 				value: 'downloadDocument',
 				description: 'Download the signed PDF document',
@@ -25,6 +39,13 @@ export const turboSignOperations: INodeProperties[] = [
 				value: 'getAuditTrail',
 				description: 'Get the tamper-evident audit trail for a signature document',
 				action: 'Get audit trail',
+			},
+			{
+				name: 'Get Embedded Signing Settings',
+				value: 'getEmbeddedSigningSettings',
+				description:
+					'Read the org-wide embedded-signing gates: enabled, external IDV allowed, override allowed, default OTP channel, allowChannelOverride (false means a different channel is rejected with OtpOverrideNotAllowed), and allowed frame ancestors (empty denies framing everywhere)',
+				action: 'Get embedded signing settings',
 			},
 			{
 				name: 'Get Recipients',
@@ -43,7 +64,8 @@ export const turboSignOperations: INodeProperties[] = [
 			{
 				name: 'Get Status',
 				value: 'getStatus',
-				description: 'Get the document-level status only (use Get Recipients for per-signer detail)',
+				description:
+					'Get the document-level status only (use Get Recipients for per-signer detail)',
 				action: 'Get document status',
 			},
 			{
@@ -56,14 +78,13 @@ export const turboSignOperations: INodeProperties[] = [
 				name: 'Send Reminder',
 				value: 'sendReminder',
 				description:
-					'Nudge a document\'s outstanding signers, ignoring the automatic reminder schedule',
+					"Nudge a document's outstanding signers, ignoring the automatic reminder schedule",
 				action: 'Send a signature reminder',
 			},
 			{
 				name: 'Send Signature',
 				value: 'prepareForSigning',
-				description:
-					'Upload a document with fields and recipients and email a signature request',
+				description: 'Upload a document with fields and recipients and email a signature request',
 				action: 'Send a signature request',
 			},
 			{
@@ -89,7 +110,7 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['prepareForReview', 'prepareForSigning'],
+				operation: ['prepareForReview', 'prepareForSigning', 'createEmbeddedSignature'],
 			},
 		},
 		options: [
@@ -125,13 +146,12 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['prepareForReview', 'prepareForSigning'],
+				operation: ['prepareForReview', 'prepareForSigning', 'createEmbeddedSignature'],
 				fileInputMethod: ['upload'],
 			},
 		},
 		default: 'data',
-		description:
-			'The input binary field containing the file to process (supports PDF, DOCX, PPTX)',
+		description: 'The input binary field containing the file to process (supports PDF, DOCX, PPTX)',
 		required: true,
 		hint: 'Select the binary field from a previous node (e.g., from Read Binary File node)',
 	},
@@ -142,7 +162,7 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['prepareForReview', 'prepareForSigning'],
+				operation: ['prepareForReview', 'prepareForSigning', 'createEmbeddedSignature'],
 				fileInputMethod: ['url'],
 			},
 		},
@@ -157,7 +177,7 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['prepareForReview', 'prepareForSigning'],
+				operation: ['prepareForReview', 'prepareForSigning', 'createEmbeddedSignature'],
 				fileInputMethod: ['deliverable'],
 			},
 		},
@@ -172,7 +192,7 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['prepareForReview', 'prepareForSigning'],
+				operation: ['prepareForReview', 'prepareForSigning', 'createEmbeddedSignature'],
 				fileInputMethod: ['template'],
 			},
 		},
@@ -225,7 +245,7 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['prepareForReview', 'prepareForSigning'],
+				operation: ['prepareForReview', 'prepareForSigning', 'createEmbeddedSignature'],
 			},
 		},
 		options: [
@@ -448,6 +468,7 @@ export const turboSignFields: INodeProperties[] = [
 					'resendEmail',
 					'sendReminder',
 					'getAuditTrail',
+					'createSigningUrl',
 				],
 			},
 		},
@@ -512,5 +533,282 @@ export const turboSignFields: INodeProperties[] = [
 			'Optional JSON array of recipient UUIDs to remind. Leave empty to remind every signer whose turn it is.',
 		placeholder: '["5f673f37-9912-4e72-85aa-8f3649760f6b"]',
 		hint: 'Leave empty to remind all eligible signers. Only signers at the current signing order are emailed.',
+	},
+
+	// ===============================
+	// Create Signing URL Fields
+	// ===============================
+	{
+		displayName: 'Select Recipient By',
+		name: 'recipientSelector',
+		type: 'options',
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['createSigningUrl'],
+			},
+		},
+		options: [
+			{
+				name: 'Recipient ID',
+				value: 'recipientId',
+				description: "TurboDocx recipient UUID (from the send response's recipients array)",
+			},
+			{
+				name: 'External ID',
+				value: 'externalId',
+				description: 'Your own identifier set on the recipient when the document was created',
+			},
+		],
+		default: 'recipientId',
+		description:
+			'Which identifier selects the recipient. The API requires exactly one of recipientId / externalId.',
+	},
+	{
+		displayName: 'Recipient Identifier',
+		name: 'recipientSelectorValue',
+		type: 'string',
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['createSigningUrl'],
+			},
+		},
+		default: '',
+		required: true,
+		description: 'The recipient ID or external ID value, matching the selector above',
+	},
+	{
+		displayName: 'Signing URL Options',
+		name: 'signingUrlOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['createSigningUrl'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Return URL',
+				name: 'returnUrl',
+				type: 'string',
+				default: '',
+				placeholder: 'https://app.example.com/signed',
+				description: 'Where TurboSign returns the signer after completion. Must be an https URL.',
+			},
+			{
+				displayName: 'Identity Assertion',
+				name: 'identityAssertion',
+				type: 'json',
+				default: '',
+				description:
+					'Only for external_idv recipients: the assertion from your own identity provider. JSON object with provider, verificationId, verifiedAt (ISO 8601) and subjectEmail (must match the recipient email unless overrideEmailMatching is true). Optional audit-trail context: method (id_document, id_document_liveness, kba, database, sso or other, which needs methodDetail), assuranceLevel, verifiedName and an https evidenceUrl.',
+				placeholder:
+					'{"provider":"ExampleIDV","verificationId":"ver_123","verifiedAt":"2026-01-01T00:00:00.000Z","subjectEmail":"john@example.com"}',
+			},
+		],
+	},
+
+	// ===============================
+	// Create Embedded Signature Fields
+	// ===============================
+	// Recipients are entered as structured rows (not raw JSON) so the identity/OTP options are
+	// first-class in the UI. Each row maps to a full recipient with an optional identityVerification
+	// block; the signer clears any OTP in the browser on the signing page (the org API key cannot
+	// verify an OTP on their behalf; see the handler).
+	{
+		displayName: 'Recipients',
+		name: 'embeddedRecipients',
+		type: 'fixedCollection',
+		typeOptions: { multipleValues: true, sortable: true },
+		placeholder: 'Add Recipient',
+		default: {},
+		required: true,
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['createEmbeddedSignature'],
+			},
+		},
+		description: 'The signers, in order. Each gets its own embedded signing URL in the response.',
+		options: [
+			{
+				name: 'recipient',
+				displayName: 'Recipient',
+				values: [
+					{
+						displayName: 'Date Anchor',
+						name: 'date',
+						type: 'string',
+						default: '',
+						placeholder: '{date1}',
+						description: 'Anchor text to replace with a date field for this recipient',
+					},
+					{
+						displayName: 'Email',
+						name: 'email',
+						type: 'string',
+						placeholder: 'name@email.com',
+						default: '',
+						required: true,
+						description: 'Recipient email address',
+					},
+					{
+						displayName: 'Full Name Anchor',
+						name: 'fullName',
+						type: 'string',
+						default: '',
+						placeholder: '{fullName1}',
+						description: 'Anchor text to replace with a full-name field for this recipient',
+					},
+					{
+						displayName: 'Identity Verification',
+						name: 'identityVerification',
+						type: 'options',
+						default: 'none',
+						description:
+							"How this recipient proves their identity before signing. OTP, external IDV and override each require embedded signing (and the matching gate) to be enabled for the org. Get Embedded Signing Settings shows the org's default channel and whether you may pick a different one.",
+						options: [
+							{
+								name: 'Email OTP',
+								value: 'emailOtp',
+								description:
+									"One-time passcode emailed to the recipient and entered on the signing page. Rejected with OtpOverrideNotAllowed when the org's default channel is SMS and allowChannelOverride is false.",
+							},
+							{
+								name: 'External IDV',
+								value: 'externalIdv',
+								description:
+									'Your own identity provider verifies the signer. The embed URL is NOT minted here: this recipient comes back status:pending, then you mint it with Create Signing URL, passing the identity assertion.',
+							},
+							{
+								name: 'None',
+								value: 'none',
+								description:
+									"Take the org's default channel: no verification when it is none, otherwise a passcode on the default channel (email, or SMS, which needs a phone number)",
+							},
+							{
+								name: 'Override',
+								value: 'override',
+								description:
+									'Skip identity verification (dev/testing). Marks the signature as not identity-verified; requires a reason.',
+							},
+							{
+								name: 'SMS OTP',
+								value: 'smsOtp',
+								description:
+									"One-time passcode texted to the recipient (requires a phone number). Rejected with OtpOverrideNotAllowed when the org's default channel is email and allowChannelOverride is false.",
+							},
+						],
+					},
+					{
+						displayName: 'IDV Provider',
+						name: 'provider',
+						type: 'string',
+						default: '',
+						description:
+							'Identity provider name (must match the assertion passed to Create Signing URL)',
+					},
+					{
+						displayName: 'Initials Anchor',
+						name: 'initials',
+						type: 'string',
+						default: '',
+						placeholder: '{initials1}',
+						description: 'Anchor text to replace with an initials field for this recipient',
+					},
+					{
+						displayName: 'Name',
+						name: 'name',
+						type: 'string',
+						default: '',
+						required: true,
+						description: 'Recipient full name',
+					},
+					{
+						displayName: 'Override Reason',
+						name: 'reason',
+						type: 'string',
+						default: '',
+						description:
+							'Why identity verification is skipped. Recorded on the certificate as the override acknowledgement.',
+					},
+					{
+						displayName: 'Phone (E.164)',
+						name: 'phone',
+						type: 'string',
+						default: '',
+						placeholder: '+13055551234',
+						description:
+							"Required for SMS OTP, and for None when the org's default channel is SMS. E.164 format, e.g. +13055551234. A number that cannot exist is rejected with OtpPhoneInvalid.",
+					},
+					{
+						displayName: 'Signature Anchor',
+						name: 'signature',
+						type: 'string',
+						default: '',
+						placeholder: '{signature1}',
+						description:
+							"Anchor text in the document to replace with this recipient's signature field",
+					},
+					{
+						displayName: 'Signing Order',
+						name: 'signingOrder',
+						type: 'number',
+						default: 0,
+						description:
+							"1-indexed signing order. Leave 0 to default to this recipient's position in the list.",
+					},
+				],
+			},
+		],
+	},
+	{
+		displayName: 'Fields (Advanced Override)',
+		name: 'embeddedFields',
+		type: 'json',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['createEmbeddedSignature'],
+			},
+		},
+		description:
+			'Optional. A full JSON array of signature fields, exactly as Send Signature accepts. When provided it OVERRIDES the per-recipient anchor shorthand above, giving you full control over field type, placement and size.',
+		placeholder:
+			'[{"recipientEmail":"john@example.com","type":"signature","template":{"anchor":"{signature1}","placement":"replace","size":{"width":200,"height":50}}}]',
+	},
+	{
+		displayName: 'Send Email',
+		name: 'embeddedSendEmail',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['createEmbeddedSignature'],
+			},
+		},
+		description:
+			'Whether to also email recipients a standalone signing link. Off by default for embedded signing, where your app shows the signing page via the returned embed URLs. When off, the signing-link, initial CC, next-signer, automatic reminder and expiry-warning emails are not sent; passcode and completed-copy emails still are, and a manual Resend Email or Send Reminder still sends.',
+	},
+	{
+		displayName: 'Return URL',
+		name: 'embeddedReturnUrl',
+		type: 'string',
+		default: '',
+		placeholder: 'https://app.example.com/signed',
+		displayOptions: {
+			show: {
+				resource: RESOURCE,
+				operation: ['createEmbeddedSignature'],
+			},
+		},
+		description:
+			"Optional completion fallback applied to every recipient's embed URL. Must be an https URL.",
 	},
 ];
