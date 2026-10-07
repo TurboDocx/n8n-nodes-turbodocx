@@ -73,7 +73,7 @@ export class TurboDocxTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'TurboDocx Trigger',
 		name: 'turboDocxTrigger',
-		icon: 'file:turbodocx.svg',
+		icon: { light: 'file:turbodocx.svg', dark: 'file:turbodocx.dark.svg' },
 		group: ['trigger'],
 		version: 1,
 		subtitle: '=Signature events',

@@ -127,7 +127,7 @@ export class TurboDocx implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'TurboDocx',
 		name: 'turboDocx',
-		icon: 'file:turbodocx.svg',
+		icon: { light: 'file:turbodocx.svg', dark: 'file:turbodocx.dark.svg' },
 		group: ['transform'],
 		version: 1,
 		subtitle:
@@ -288,7 +288,13 @@ export class TurboDocx implements INodeType {
 						});
 						continue;
 					}
-					throw error;
+					// Re-raise the already-formatted node error as a fresh NodeOperationError
+					// (the scanner's require-node-api-error rule forbids re-throwing a caught
+					// variable). Message and description are preserved verbatim.
+					throw new NodeOperationError(this.getNode(), error.message, {
+						itemIndex: i,
+						description: error.description ?? undefined,
+					});
 				}
 
 				// Handle unexpected errors (network issues, n8n-wrapped API errors)

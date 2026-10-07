@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1]
+
+### Fixed
+
+- **n8n community-node review findings.** Re-thrown node errors are now wrapped in
+  `NodeOperationError`; the HMAC contract test generates its secret at runtime instead of
+  hardcoding one; test files are excluded from the published `dist/`; node and credential icons
+  provide themed `{ light, dark }` variants; and the codex `nodeVersion` is pinned to `"1.0"`
+  (a fixed schema value, per n8n review).
+
 ## [1.4.0]
 
 ### Changed

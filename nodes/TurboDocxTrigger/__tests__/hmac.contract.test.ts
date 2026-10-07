@@ -8,7 +8,9 @@ function backendSign(payload: string, secret: string, timestamp: string): string
 }
 
 describe('trigger HMAC vs backend WebhookService', () => {
-  const secret = 'whsec_test_1234567890';
+  // Generated per-run so no secret literal lives in source (scanner: no-hardcoded-secrets).
+  // Any value works — these tests only exercise the HMAC round-trip.
+  const secret = crypto.randomBytes(24).toString('hex');
 
   it('accepts a signature produced by the backend signer over the exact wire bytes', () => {
     // Backend does: const jsonPayload = JSON.stringify(payload); ... post(url, jsonPayload)

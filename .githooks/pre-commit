@@ -1,0 +1,35 @@
+#!/bin/sh
+# n8n official community-node scanner (source leg) — pre-commit gate.
+#
+# This is a plain committed git hook, NOT husky: husky needs a `prepare`
+# lifecycle script in package.json, which the scanner's
+# no-forbidden-lifecycle-scripts rule bans. Keeping the scanner out of
+# package.json entirely is what keeps the *published* package clean, so the
+# hook installs the scanner on demand instead.
+#
+# Enable it once per clone:
+#     git config core.hooksPath .githooks
+#
+# It fires only when node/credential sources or package.json are staged (so
+# doc-only or CI-only commits stay fast). The full source+dist scan runs in CI;
+# this hook runs the quick source-only leg — no build/pack needed — which
+# catches every error-level violation, since those live in the .ts sources.
+#
+# Bypass in an emergency: `git commit --no-verify`.
+
+set -e
+
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^(nodes/|credentials/|package\.json$)'; then
+	echo "n8n community-node scan: no node/credential/package.json changes staged, skipping."
+	exit 0
+fi
+
+# Install the scanner if it isn't resolvable, without touching package.json /
+# package-lock.json (--no-save). Pinned to match CI.
+if ! node -e "require.resolve('@n8n/scan-community-package/scanner/scanner.mjs')" >/dev/null 2>&1; then
+	echo "Installing @n8n/scan-community-package@0.32.0 (not saved to package.json)..."
+	npm install --no-save @n8n/scan-community-package@0.32.0
+fi
+
+echo "Running n8n community-node scan (source)..."
+node scripts/scan-community-package.mjs --source-only

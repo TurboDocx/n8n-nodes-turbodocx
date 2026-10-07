@@ -70,15 +70,18 @@ npm install @turbodocx/n8n-nodes-turbodocx
 |-----------|-------------|----------|
 | **Prepare for Review** | Upload a document with signature fields and get a preview URL. No emails sent. | Preview field placement before sending to clients |
 | **Prepare for Signing** | Upload a document and automatically send signature requests to all recipients | Send employment agreements, contracts, NDAs for signature |
-| **Get Document Status** | Check the document-level status (draft, pending, completed, voided) | Verify all parties have signed before next step |
+| **Get Document Status** | Check the document-level status (draft, under_review, completed, voided, expired) | Verify all parties have signed before next step |
 | **Get Recipients** | Every recipient with their signing status, email history, and who sent the document | Chase the exact people you're still waiting on, not the whole list |
 | **Download Document** | Download the final signed PDF | Archive to cloud storage or send to accounting |
 | **Void Document** | Cancel a signature request and invalidate all links | Deal falls through, need to cancel request |
-| **Resend Email** | Resend signature request to recipients who haven't signed | Send reminders after 3 days |
+| **Resend Email** | Resend the signature request to recipients who haven't signed | Recipient lost or never received the original signing email |
+| **Send Reminder** | Nudge a document's outstanding signers — a standalone reminder that ignores the automatic cadence and cap | Chase signers outside the normal reminder rhythm |
 | **Get Audit Trail** | Fetch the full signing audit trail for a document | Compliance evidence of who viewed/signed and when |
 | **Create Signing URL** | Get the embedded signing URL for one recipient of an already-sent document (single-use for external IDV and override; the reusable signing link for otp and no-verification recipients) | Embed signing in your own app / iframe; carry the signer to the document in-context |
 | **Create Embedded Signature** | Send a document AND mint a per-recipient embed URL in one call, with optional per-recipient email/SMS OTP or identity verification | In-app or in-person (kiosk) signing where the host owns the UX; returns one embed URL per signer |
 | **Get Embedded Signing Settings** | Read the org-wide embedded-signing gates (enabled, external IDV allowed, override allowed, default OTP channel, `allowChannelOverride`, allowed frame ancestors; an empty list denies framing everywhere) | Check what embedded signing is permitted before requesting signing URLs |
+
+**Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 
 **Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.)
 
@@ -110,6 +113,8 @@ Full CPQ surface, modelled as several resources for an intuitive UX:
 | **Contact** | Get Many, Bulk Create, Create, Update, Delete |
 | **Quote Template** | Get Many, Get Default, Get, Create, Update, Delete |
 | **Quote Type** | Get Many, Bulk Create, Create, Update, Delete |
+
+**Reminder & Expiration Schedule (quote Send / Send With Deliverable / Create and Send)**: these send operations accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, cap) plus per-quote expiration and its warning cadence. Leave any field out to inherit your organization's defaults. Quote constraint: expiry is pinned to the quote's Valid Until (so Expire After is ignored while expiration is on), and the reminder/warning cadence must fit inside Valid Until or the send is rejected.
 
 ### Webhooks
 
@@ -300,9 +305,54 @@ Fields configuration:
 |------|-------------|----------|
 | `signature` | Full signature field | Primary signature area |
 | `initial` | Initial field (smaller) | Initial each page or clause |
-| `text` | Text input field | Enter names, titles, or custom text |
 | `date` | Date picker field | Signature date, start date, etc. |
+| `full_name` | Recipient's full name | Auto-filled from the recipient |
+| `first_name` | Recipient's first name | Auto-filled from the recipient |
+| `last_name` | Recipient's last name | Auto-filled from the recipient |
+| `email` | Recipient's email | Auto-filled from the recipient |
+| `title` | Recipient's job title | Auto-filled from the recipient |
+| `company` | Recipient's company | Auto-filled from the recipient |
+| `text` | Text input field | Enter names, titles, or custom text |
 | `checkbox` | Checkbox field | Agree to terms, opt-in selections |
+
+## Field Default Values
+
+Any field may carry an optional `defaultValue` to pre-fill it (max 600 characters). It is a pure
+passthrough — forwarded verbatim to the backend, which owns validation.
+
+- **Date fields** fill with the signing date by default. To pin a specific date instead, set
+  `defaultValue` to that date in `MM/DD/YYYY` (e.g. `"12/31/2026"`); omit it (or send `""`) to keep
+  the signing-date behaviour. The value must be a real calendar date — a non-existent date such as
+  `"02/31/2026"` is rejected.
+- **`signature` and `initial`** fields cannot carry a `defaultValue`, and a **`date`** field cannot
+  be `isReadonly`.
+
+```json
+[
+  {"recipientEmail": "client@example.com", "type": "date", "template": {"anchor": "{effective_date}", "placement": "replace", "width": 120, "height": 20}, "defaultValue": "12/31/2026"}
+]
+```
+
+## Optional Fields
+
+Every field is required unless you say otherwise. Set `"required": false` on a field to let the
+signer leave it blank; the signing page marks it **Optional**. Leaving `required` out (or sending
+`null`) keeps the field required. Like `defaultValue`, the flag is forwarded verbatim and the
+backend validates it:
+
+- **`signature` and `initial`** fields are always required. `"required": false` on them is rejected.
+- `required` must be a boolean. Any other value is rejected.
+- Each recipient needs **at least one required field they can fill in**. A recipient whose fields
+  are all optional or `isReadonly` is rejected.
+- An `isReadonly` field can also be optional. It is pre-filled and the signer can't change it, so
+  it never holds up signing either way.
+
+```json
+[
+  {"recipientEmail": "client@example.com", "type": "signature", "template": {"anchor": "{client_sig}", "placement": "replace", "width": 180, "height": 50}},
+  {"recipientEmail": "client@example.com", "type": "text", "required": false, "template": {"anchor": "{notes}", "placement": "replace", "width": 240, "height": 30}}
+]
+```
 
 ## Conditional (IF/THEN) Fields
 
