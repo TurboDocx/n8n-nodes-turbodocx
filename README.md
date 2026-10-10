@@ -77,6 +77,7 @@ npm install @turbodocx/n8n-nodes-turbodocx
 | **Resend Email** | Resend the signature request to recipients who haven't signed | Recipient lost or never received the original signing email |
 | **Send Reminder** | Nudge a document's outstanding signers — a standalone reminder that ignores the automatic cadence and cap | Chase signers outside the normal reminder rhythm |
 | **Get Audit Trail** | Fetch the full signing audit trail for a document | Compliance evidence of who viewed/signed and when |
+| **Get Template Signature Setup** | List a template's signer roles (key, label, signing order, saved signer, field count) | Look up the role keys to send a template with roles |
 
 **Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 
@@ -350,6 +351,32 @@ backend validates it:
   {"recipientEmail": "client@example.com", "type": "text", "required": false, "template": {"anchor": "{notes}", "placement": "replace", "width": 240, "height": 30}}
 ]
 ```
+
+## Template Signer Roles
+
+A template whose signers and fields were set up in TurboDocx can be sent without writing any
+fields. Choose **Template** as the File Input Method, give each recipient a `role` with the role
+key shown under **Use via API** on the template page, and leave **Fields** empty (the node sends
+`[]`). Each recipient gets the fields saved for their role.
+
+```json
+[
+  {"role": "client", "name": "Jane Doe", "email": "jane@client.com"},
+  {"role": "vendor", "name": "Sam Vendor", "email": "sam@vendor.com"}
+]
+```
+
+- A role recipient needs no `signingOrder`: roles sign in the order saved on the template, and
+  recipients without a role sign after them.
+- A role you leave out uses the signer saved on the template. If it has none, the API returns a
+  400 naming the unfilled role.
+- An unknown role key is a 400 that lists the template's valid roles.
+- Fields you do pass are added to the saved ones.
+- `role` only works with a template (`templateId`).
+
+Use **Get Template Signature Setup** to list a template's roles: each has a `key` (the value for
+`role`), `label`, `order`, `hasSavedSigner` (with `defaultName` / `defaultEmail` when true) and
+`fieldCount`.
 
 ## Conditional (IF/THEN) Fields
 
