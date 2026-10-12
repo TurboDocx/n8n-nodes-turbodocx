@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Template signer roles.** Recipients can name a template's signer `role`, and the fields saved
+  for that role are used. New operation **Get Template Signature Setup** lists a template's roles.
+
+### Changed
+
+- The **Fields** parameter is now documented as required unless the recipients name roles. PowerPoint
+  files, templates and deliverables are no longer listed as signable: the API returns a 400
+  `SignatureNotSupportedForPresentation`.
+
 ## [1.4.1]
 
 ### Fixed

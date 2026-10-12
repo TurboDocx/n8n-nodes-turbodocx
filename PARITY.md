@@ -55,7 +55,7 @@ and are not returned by any endpoint.
 
 Note: template **signer roles** (`recipients[].role`, with `fields` optional) are supported on both
 prepare operations. `recipients` and `fields` are JSON passthroughs, so `role` is forwarded as
-written, and an empty Fields parameter is sent as `[]`, matching the SDK's `fields ?? []`.
+written, and an empty Fields parameter is sent as `[]`, which the API treats as no fields (accepted only when a recipient names a role, otherwise `FieldsRequired`).
 
 Note: the optional per-document **reminder/expiration schedule overrides** (`remindersEnabled`,
 `reminderDelay`, `reminderInterval`, `maxReminders`, `expirationEnabled`, `expireAfter`,

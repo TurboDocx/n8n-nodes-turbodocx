@@ -118,7 +118,9 @@ describe('TurboSign template signer roles', () => {
 		}
 
 		it('is listed as a TurboSign operation', () => {
-			const values = (turboSignOperations[0].options as Array<{ value: string }>).map((o) => o.value);
+			const values = (turboSignOperations[0].options as Array<{ value: string }>).map(
+				(o) => o.value,
+			);
 			expect(values).toContain('getTemplateSignatureSetup');
 		});
 
@@ -142,6 +144,25 @@ describe('TurboSign template signer roles', () => {
 
 			expect(items).toHaveLength(1);
 			expect(items[0].json).toEqual(SETUP);
+		});
+	});
+
+	describe('parameter text', () => {
+		const find = (name: string) =>
+			(turboSignFields as Array<{ name: string; description?: string; options?: unknown[] }>).find(
+				(f) => f.name === name,
+			);
+
+		it('says Fields is required unless recipients name template signer roles', () => {
+			expect(find('fields')?.description).toContain(
+				'Required unless the recipients name template signer roles (recipients[].role)',
+			);
+		});
+
+		it('does not offer PPTX for signing and says PowerPoint templates cannot be signed', () => {
+			const text = JSON.stringify(find('fileInputMethod')?.options);
+			expect(text).not.toMatch(/PPTX/i);
+			expect(text).toContain('PowerPoint templates cannot be signed');
 		});
 	});
 });

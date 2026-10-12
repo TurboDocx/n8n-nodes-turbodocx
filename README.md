@@ -81,7 +81,7 @@ npm install @turbodocx/n8n-nodes-turbodocx
 
 **Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 
-**Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.)
+**Supported File Types**: PDF, DOCX, or URLs to hosted files (S3, Google Drive, etc.). PowerPoint (PPTX) files, templates and deliverables cannot be sent for signature: the API returns a 400 `SignatureNotSupportedForPresentation`. Use a Word or PDF file.
 
 ### Deliverable (Document Generation)
 
@@ -146,7 +146,7 @@ Provision and manage customer organizations from a partner account — including
 
 **Step-by-step:**
 1. Add a **Webhook** node to receive contract data
-2. Add **HTTP Request** node to download document from your storage (supports PDF, DOCX, PPTX)
+2. Add **HTTP Request** node to download document from your storage (supports PDF, DOCX)
 3. Add **TurboDocx** node with operation **TurboSign: Prepare for Signing**
    - **File**: Select binary data from previous node (or provide URL to hosted file)
    - **Recipients**:
@@ -372,7 +372,8 @@ key shown under **Use via API** on the template page, and leave **Fields** empty
   400 naming the unfilled role.
 - An unknown role key is a 400 that lists the template's valid roles.
 - Fields you do pass are added to the saved ones.
-- `role` only works with a template (`templateId`).
+- `role` only works with a template (`templateId`), and only with a PDF signature template. PowerPoint templates cannot be sent for signature.
+- Fields is required unless the recipients name roles. Without roles, an empty Fields value is rejected (400 `FieldsRequired`).
 
 Use **Get Template Signature Setup** to list a template's roles: each has a `key` (the value for
 `role`), `label`, `order`, `hasSavedSigner` (with `defaultName` / `defaultEmail` when true) and
@@ -498,7 +499,7 @@ TurboSign supports **4 different ways** to provide documents for signature reque
 
 | Method | What It Does | When to Use | Example |
 |--------|--------------|-------------|---------|
-| **Upload File** | Upload PDF, DOCX, or PPTX directly from workflow | Files from triggers, HTTP requests, or local storage | Binary data from previous node |
+| **Upload File** | Upload PDF or DOCX directly from workflow | Files from triggers, HTTP requests, or local storage | Binary data from previous node |
 | **File URL** | Download from external URL (S3, Google Drive, Dropbox, etc.) | Documents hosted on cloud storage or CDN | `https://bucket.s3.amazonaws.com/contract.pdf` |
 | **Deliverable** | Reference existing TurboDocx deliverable by UUID | Generated a document and want to send for signature | `550e8400-e29b-41d4-a716-446655440000` |
 | **Template** | Use TurboDocx template by UUID (static, no data merge) | Pre-configured templates ready to send as-is | `660e8400-e29b-41d4-a716-446655440001` |
@@ -509,7 +510,7 @@ TurboSign supports **4 different ways** to provide documents for signature reque
 |--------|-----------|---------------------|
 | PDF | `.pdf` | No (already PDF) |
 | Microsoft Word | `.docx` | ✅ Yes |
-| Microsoft PowerPoint | `.pptx` | ✅ Yes |
+| Microsoft PowerPoint | `.pptx` | Not supported for signing (400 `SignatureNotSupportedForPresentation`) |
 
 ### Common Workflow Patterns
 
