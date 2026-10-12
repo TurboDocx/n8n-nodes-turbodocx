@@ -103,7 +103,7 @@ export const turboSignFields: INodeProperties[] = [
 			{
 				name: 'Upload File',
 				value: 'upload',
-				description: 'Upload a PDF or Word (DOCX) file from binary data',
+				description: 'Upload a PDF, DOCX, or PPTX file from binary data',
 			},
 			{
 				name: 'File URL',

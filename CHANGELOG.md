@@ -15,8 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The **Fields** parameter is now documented as required unless the recipients name roles. PowerPoint
-  files, templates and deliverables are no longer listed as signable: the API returns a 400
-  `SignatureNotSupportedForPresentation`.
+  templates and deliverables are no longer listed as signable: the API returns a 400
+  `SignatureNotSupportedForPresentation`. Uploaded PowerPoint files can still be sent.
 
 ## [1.4.1]
 

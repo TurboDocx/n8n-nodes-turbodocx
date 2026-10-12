@@ -159,10 +159,13 @@ describe('TurboSign template signer roles', () => {
 			);
 		});
 
-		it('does not offer PPTX for signing and says PowerPoint templates cannot be signed', () => {
-			const text = JSON.stringify(find('fileInputMethod')?.options);
-			expect(text).not.toMatch(/PPTX/i);
-			expect(text).toContain('PowerPoint templates cannot be signed');
+		// Uploaded PowerPoint files are still converted and signed; only PowerPoint templates are refused
+		it('still offers PPTX uploads and says PowerPoint templates cannot be signed', () => {
+			const options = find('fileInputMethod')?.options as Array<{ value: string; description: string }>;
+			const upload = options.find(o => o.value === 'upload');
+			const template = options.find(o => o.value === 'template');
+			expect(upload?.description).toMatch(/PPTX/);
+			expect(template?.description).toContain('PowerPoint templates cannot be signed');
 		});
 	});
 });
