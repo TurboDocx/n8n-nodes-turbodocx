@@ -118,7 +118,7 @@ export const turboSignFields: INodeProperties[] = [
 			{
 				name: 'Template',
 				value: 'template',
-				description: 'Use TurboDocx template (PDF or Word; PowerPoint templates cannot be signed)',
+				description: 'Use TurboDocx template (converts DOCX/PPTX to PDF)',
 			},
 		],
 		default: 'upload',

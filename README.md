@@ -81,7 +81,7 @@ npm install @turbodocx/n8n-nodes-turbodocx
 
 **Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 
-**Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.). PowerPoint **templates and deliverables** cannot be sent for signature: the API returns a 400 `SignatureNotSupportedForPresentation`. Use a Word or PDF template.
+**Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.).
 
 ### Deliverable (Document Generation)
 
@@ -372,7 +372,7 @@ key shown under **Use via API** on the template page, and leave **Fields** empty
   400 naming the unfilled role.
 - An unknown role key is a 400 that lists the template's valid roles.
 - Fields you do pass are added to the saved ones.
-- `role` only works with a template (`templateId`), and only with a PDF signature template. PowerPoint templates cannot be sent for signature.
+- `role` only works with a template (`templateId`), and only with a PDF signature template.
 - Fields is required unless the recipients name roles. Without roles, an empty Fields value is rejected (400 `FieldsRequired`).
 
 Use **Get Template Signature Setup** to list a template's roles: each has a `key` (the value for
@@ -510,7 +510,7 @@ TurboSign supports **4 different ways** to provide documents for signature reque
 |--------|-----------|---------------------|
 | PDF | `.pdf` | No (already PDF) |
 | Microsoft Word | `.docx` | ✅ Yes |
-| Microsoft PowerPoint | `.pptx` | ✅ Uploaded files yes; PowerPoint templates and deliverables no (400 `SignatureNotSupportedForPresentation`) |
+| Microsoft PowerPoint | `.pptx` | ✅ Yes |
 
 ### Common Workflow Patterns
 

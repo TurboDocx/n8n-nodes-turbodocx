@@ -159,8 +159,7 @@ describe('TurboSign template signer roles', () => {
 			);
 		});
 
-		// Uploaded PowerPoint files are still converted and signed; only PowerPoint templates are refused
-		it('still offers PPTX uploads and says PowerPoint templates cannot be signed', () => {
+		it('still offers PPTX uploads and templates that convert DOCX/PPTX to PDF', () => {
 			const options = find('fileInputMethod')?.options as Array<{
 				value: string;
 				description: string;
@@ -168,7 +167,7 @@ describe('TurboSign template signer roles', () => {
 			const upload = options.find((o) => o.value === 'upload');
 			const template = options.find((o) => o.value === 'template');
 			expect(upload?.description).toMatch(/PPTX/);
-			expect(template?.description).toContain('PowerPoint templates cannot be signed');
+			expect(template?.description).toContain('converts DOCX/PPTX to PDF');
 		});
 	});
 });
