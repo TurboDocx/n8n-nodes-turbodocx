@@ -17,13 +17,13 @@ Baseline captured at: SDK `@turbodocx/sdk@0.4.0`, node `@turbodocx/n8n-nodes-tur
 
 | SDK Module | SDK callable methods | Covered in node (v1.2.0) | Gap |
 |---|---:|---:|---|
-| TurboSign (`sign.ts`) | 8 | 8 | none |
+| TurboSign (`sign.ts`) | 9 | 9 | none |
 | Deliverable (`deliverable.ts`) | 7 | 7 | none |
 | TurboQuote (`quote.ts`) | 68 | 68 | none |
 | TurboPartner (`partner.ts`) | 27 | 27 | none (uses 2nd credential) |
 | TurboWebhooks (`webhooks.ts`) | 10 + `verifyWebhookSignature` | 10 + helper | none |
 
-**Full method parity: 120/120 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
+**Full method parity: 121/121 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
 Zero gaps, zero strays.** The only SDK surface intentionally not wrapped is the set of
 [Deliberate Exclusions](#deliberate-exclusions) — helpers, low-level primitives, and
 convenience overloads that have no idiomatic n8n mapping.
@@ -47,10 +47,15 @@ Credential: `turboDocxApi` (apiKey + orgId). Auth headers: `Authorization: Beare
 | `resend(documentId, recipientIds)` | POST `/turbosign/documents/{id}/resend-email` | turboSign / `resendEmail` | ✅ |
 | `sendReminder(documentId, recipientIds?)` | POST `/turbosign/documents/{id}/send-reminder` | turboSign / `sendReminder` | ✅ |
 | `getAuditTrail(documentId)` | GET `/turbosign/documents/{id}/audit-trail` | turboSign / `getAuditTrail` | ✅ |
+| `getTemplateSignatureSetup(templateId)` | GET `/turbosign/templates/{templateId}/signature-setup` | turboSign / `getTemplateSignatureSetup` | ✅ |
 
 Note: `signUrl` is a legacy **field** on the Go and Java `RecipientResponse` models, not a method —
 no node operation required. The API never populates it; signing links are emailed to recipients
 and are not returned by any endpoint.
+
+Note: template **signer roles** (`recipients[].role`, with `fields` optional) are supported on both
+prepare operations. `recipients` and `fields` are JSON passthroughs, so `role` is forwarded as
+written, and an empty Fields parameter is sent as `[]`, which the API treats as no fields (accepted only when a recipient names a role, otherwise `FieldsRequired`).
 
 Note: the optional per-document **reminder/expiration schedule overrides** (`remindersEnabled`,
 `reminderDelay`, `reminderInterval`, `maxReminders`, `expirationEnabled`, `expireAfter`,

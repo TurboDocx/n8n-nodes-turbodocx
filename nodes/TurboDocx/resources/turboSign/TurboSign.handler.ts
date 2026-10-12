@@ -153,7 +153,10 @@ async function buildPrepareBody(
 ): Promise<ITurboSignRequestBody> {
 	const fileInputMethod = ctx.getNodeParameter('fileInputMethod', i) as string;
 	const recipients = ctx.getNodeParameter('recipients', i) as string;
-	const fields = ctx.getNodeParameter('fields', i) as string;
+	// Optional: a template sent with signer roles takes its fields from the template, so an empty
+	// Fields parameter is sent as `[]` (any fields given are added to the saved ones).
+	const rawFields = ctx.getNodeParameter('fields', i, '') as string;
+	const fields = typeof rawFields === 'string' && rawFields.trim() === '' ? '[]' : rawFields;
 	const additionalFields = ctx.getNodeParameter('additionalFields', i, {}) as ITurboSignAdditionalFields;
 
 	// Shape-check any conditional (IF/THEN) rules before the round-trip. `fields` itself is
@@ -378,6 +381,22 @@ export async function executeTurboSign(
 				method: 'POST',
 				endpoint: `/turbosign/documents/${documentId}/send-reminder`,
 				body,
+				unwrap: 'smart',
+			},
+			i,
+		);
+		return [{ json: result }];
+	}
+
+	// Lists a template's signer roles (key, label, order, saved signer, field count). Each role's
+	// `key` is the value for `role` on a Send Signature / Get Review Link recipient.
+	if (operation === 'getTemplateSignatureSetup') {
+		const templateId = ctx.getNodeParameter('templateId', i) as string;
+		const result = await turboDocxApiRequest(
+			ctx,
+			{
+				method: 'GET',
+				endpoint: `/turbosign/templates/${encodeURIComponent(templateId)}/signature-setup`,
 				unwrap: 'smart',
 			},
 			i,
