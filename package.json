@@ -7,13 +7,6 @@
     },
     "description": "n8n node for TurboDocx API - document & presentation generation, TurboSign e-signatures, TurboQuote CPQ, TurboPartner management, and webhooks",
     "license": "MIT",
-    "overrides": {
-        "form-data": "4.0.6",
-        "lodash": "4.18.1",
-        "handlebars": "4.7.9",
-        "minimatch": "9.0.7",
-        "undici": "6.28.1"
-    },
     "homepage": "https://turbodocx.com",
     "keywords": [
         "n8n-community-node-package",
