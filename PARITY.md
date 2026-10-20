@@ -19,11 +19,11 @@ Baseline captured at: SDK `@turbodocx/sdk@0.4.0`, node `@turbodocx/n8n-nodes-tur
 |---|---:|---:|---|
 | TurboSign (`sign.ts`) | 8 | 8 | none |
 | Deliverable (`deliverable.ts`) | 7 | 7 | none |
-| TurboQuote (`quote.ts`) | 68 | 68 | none |
+| TurboQuote (`quote.ts`) | 79 | 79 | none |
 | TurboPartner (`partner.ts`) | 27 | 27 | none (uses 2nd credential) |
 | TurboWebhooks (`webhooks.ts`) | 10 + `verifyWebhookSignature` | 10 + helper | none |
 
-**Full method parity: 120/120 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
+**Full method parity: 131/131 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
 Zero gaps, zero strays.** The only SDK surface intentionally not wrapped is the set of
 [Deliberate Exclusions](#deliberate-exclusions) — helpers, low-level primitives, and
 convenience overloads that have no idiomatic n8n mapping.
@@ -93,6 +93,7 @@ unwraps the singular `{ result }` and would miss them).
 |---|---|---|---|
 | `getQuoteNumberConfig()` | GET `/v1/quotes/number-config` | quoteNumberConfig / `get` | ✅ |
 | `updateQuoteNumberConfig(format)` | PATCH `/v1/quotes/number-config` | quoteNumberConfig / `update` | ✅ |
+| `getNextQuoteNumber()` | GET `/v1/quotes/number-config/next` | quoteNumberConfig / `getNext` | ✅ |
 
 ### Bulk Create
 Each POSTs `{ rows }` and returns a single partial-success `BulkImportResult`
@@ -110,11 +111,13 @@ Each POSTs `{ rows }` and returns a single partial-success `BulkImportResult`
 | SDK method | HTTP | n8n resource/operation | Status |
 |---|---|---|---|
 | `listQuotes(opts)` | GET `/v1/quotes` | quote / `list` | ✅ |
+| `getQuoteSummary(opts)` | GET `/v1/quotes/summary` | quote / `getSummary` | ✅ |
+| `listQuoteCreators()` | GET `/v1/quotes/creators` | quote / `listCreators` | ✅ |
 | `createQuote(req)` | POST `/v1/quotes` | quote / `create` | ✅ |
 | `getQuote(id)` | GET `/v1/quotes/{id}` | quote / `get` | ✅ |
 | `updateQuote(id, req)` | PATCH `/v1/quotes/{id}` | quote / `update` | ✅ |
 | `deleteQuote(id)` | DELETE `/v1/quotes/{id}` | quote / `delete` | ✅ |
-| `duplicateQuote(id)` | POST `/v1/quotes/{id}/duplicate` | quote / `duplicate` | ✅ |
+| `duplicateQuote(id, { name? })` | POST `/v1/quotes/{id}/duplicate` | quote / `duplicate` (Additional Fields → Name) | ✅ |
 | `applyPriceBook(quoteId, priceBookId)` | POST `/v1/quotes/{id}/apply-pricebook` | quote / `applyPriceBook` | ✅ |
 | `removePriceBook(quoteId)` | POST `/v1/quotes/{id}/remove-pricebook` | quote / `removePriceBook` | ✅ |
 | `downloadQuotePdf(id)` | GET `/v1/quotes/{id}/pdf` (binary) | quote / `downloadPdf` | ✅ |
@@ -144,9 +147,14 @@ constraint: expiry is pinned to the quote's Valid Until, so `expireAfter` is ign
 | `addBundleLineItems(quoteId, items)` | POST `/v1/quotes/{id}/items/bundle` | quoteLineItem / `addBundle` | ✅ |
 | `updateLineItem(quoteId, itemId, req)` | PATCH `/v1/quotes/{id}/items/{itemId}` | quoteLineItem / `update` | ✅ |
 | `removeLineItem(quoteId, itemId)` | DELETE `/v1/quotes/{id}/items/{itemId}` | quoteLineItem / `remove` | ✅ |
+| `getQuoteLineItemImages(quoteId)` | GET `/v1/quotes/{id}/items/images` | quoteLineItem / `getQuoteImages` | ✅ |
+| `getLineItemImages(quoteId, itemId)` | GET `/v1/quotes/{id}/items/{itemId}/images` | quoteLineItem / `getImages` | ✅ |
+| `addLineItemImages(quoteId, itemId, images)` | POST `/v1/quotes/{id}/items/{itemId}/images` (multipart `images`) | quoteLineItem / `addImages` | ✅ |
+| `reorderLineItemImages(quoteId, itemId, ids)` | PUT `/v1/quotes/{id}/items/{itemId}/images/order` | quoteLineItem / `reorderImages` | ✅ |
+| `removeLineItemImage(quoteId, itemId, imageId)` | DELETE `/v1/quotes/{id}/items/{itemId}/images/{imageId}` | quoteLineItem / `removeImage` | ✅ |
 
 ### Products
-| `listProducts` `createProduct` `getProduct` `updateProduct` `deleteProduct` `duplicateProduct` `getProductPrimaryImages` | `/v1/products*` | product / list·create·get·update·delete·duplicate·primaryImages | ✅ |
+| `listProducts` `createProduct` `getProduct` `updateProduct` `deleteProduct` `duplicateProduct` `getProductPrimaryImages` `getProductQuoteImages` | `/v1/products*` | product / list·create·get·update·delete·duplicate·primaryImages·quoteImages | ✅ |
 
 ### Price Books
 | `listPriceBooks` `createPriceBook` `getPriceBook` `updatePriceBook` `deletePriceBook` `duplicatePriceBook` `listPriceBookProducts` | `/v1/pricebooks*` | priceBook / list·create·get·update·delete·duplicate·listProducts | ✅ |
@@ -155,14 +163,26 @@ constraint: expiry is pinned to the quote's Valid Until, so `expireAfter` is ign
 | `listBundles` `createBundle` `getBundle` `updateBundle` `deleteBundle` `duplicateBundle` | `/v1/bundles*` | bundle / list·create·get·update·delete·duplicate | ✅ |
 
 ### Companies
-| `listCompanies` `createCompany` `getCompany` `updateCompany` `deleteCompany` `listCompanyContacts` | `/v1/companies*` | company / list·create·get·update·delete·listContacts | ✅ |
+| `listCompanies` `createCompany` `getCompany` `updateCompany` `deleteCompany` `listCompanyContacts` `getCompanyOpenQuotes` | `/v1/companies*` | company / list·create·get·update·delete·listContacts·listOpenQuotes | ✅ |
 
 ### Contacts
-| `listContacts` `createContact` `updateContact` `deleteContact` | `/v1/contacts*` | contact / list·create·update·delete | ✅ |
+| `listContacts` `createContact` `updateContact` `deleteContact` `getContactOpenQuotes` | `/v1/contacts*` | contact / list·create·update·delete·listOpenQuotes | ✅ |
 (no `getContact` in SDK — single-contact lookup not exposed)
 
 ### Quote Templates
 | `listTemplates` `getTemplate` `getTemplateById` `createTemplate` `updateTemplate` `deleteTemplate` | `/v1/quote-template(s)*` | quoteTemplate / list·getDefault·get·create·update·delete | ✅ |
+
+### Sorting, filters and duplicates
+
+Every list operation has a **Sort** collection (`sortBy` + `sortDirection`), sent only when set.
+Quote → Get Many / Get Summary share the **Filters** collection: Company IDs, Currencies, Statuses
+(including `expired`), Created By (user IDs from Get Creators), Created by API Keys, Valid Until
+Window / From / To (dateTime, sent as YYYY-MM-DD) and Summary Currency. Product → Get Many adds
+Billing Frequencies and Currencies (multi), Bundle → Get Many adds Currencies, Contact → Get Many
+adds Company IDs; the single-value filters are kept, so saved workflows are unchanged. The four
+Duplicate operations send `{ name }` only when Additional Fields → Name is set. Company create and
+update take Email; Price Book update takes Reset Product Pricing. Products and custom line items
+take at most 3 images (checked in the node before upload).
 
 ### Quote Types / Categories
 | `listTypes` `createType` `updateType` `deleteType` | `/v1/types*` | quoteType / list·create·update·delete | ✅ |

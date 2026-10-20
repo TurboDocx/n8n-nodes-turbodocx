@@ -2,61 +2,15 @@ import { IExecuteFunctions, INodeExecutionData, IDataObject, NodeOperationError 
 import {
 	turboDocxApiRequest,
 	parseJsonParameter,
-	detectBinaryType,
 	paginatedList,
 } from '../../shared/GenericFunctions';
-
-/** A single file part for an n8n multipart upload. */
-interface IFilePart {
-	value: Buffer;
-	options: { filename: string; contentType: string };
-}
-
-/** Split a comma-separated string into trimmed, non-empty tokens. */
-function splitCsv(value: string): string[] {
-	return value
-		.split(',')
-		.map((s) => s.trim())
-		.filter((s) => s.length > 0);
-}
-
-/** Multer on the product routes accepts at most this many `images` parts. */
-const MAX_PRODUCT_IMAGES = 5;
-
-/**
- * Read the named binary properties off the current input item and turn each into
- * an n8n multipart file part, with type detected from the file's magic bytes.
- */
-async function collectImageParts(
-	ctx: IExecuteFunctions,
-	i: number,
-	binaryPropertyNames: string[],
-): Promise<IFilePart[]> {
-	// Fail here with a message that names the limit, rather than letting the backend's
-	// multer reject the upload with an opaque LIMIT_UNEXPECTED_FILE error.
-	if (binaryPropertyNames.length > MAX_PRODUCT_IMAGES) {
-		throw new NodeOperationError(
-			ctx.getNode(),
-			`Too many images: ${binaryPropertyNames.length} binary properties given, but a product accepts at most ${MAX_PRODUCT_IMAGES}`,
-			{ itemIndex: i },
-		);
-	}
-
-	const parts: IFilePart[] = [];
-	for (const propName of binaryPropertyNames) {
-		const binaryMeta = ctx.helpers.assertBinaryData(i, propName);
-		const buffer = await ctx.helpers.getBinaryDataBuffer(i, propName);
-		const detected = detectBinaryType(buffer);
-		parts.push({
-			value: buffer,
-			options: {
-				filename: binaryMeta.fileName || `image.${detected.extension}`,
-				contentType: binaryMeta.mimeType || detected.mimeType,
-			},
-		});
-	}
-	return parts;
-}
+import {
+	applySort,
+	collectImageParts,
+	duplicateBody,
+	oneOrMany,
+	splitCsv,
+} from '../../shared/turboQuoteOptions';
 
 /**
  * Paginate a list endpoint that returns `{ results, totalRecords }` (after smart
@@ -110,10 +64,13 @@ async function executeProduct(
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
-		if (filters.billingFrequency) baseQs.billingFrequency = filters.billingFrequency;
-		if (filters.currency) baseQs.currency = filters.currency;
+		const billingFrequency = oneOrMany(filters.billingFrequency, filters.billingFrequencies);
+		if (billingFrequency) baseQs.billingFrequency = billingFrequency;
+		const currency = oneOrMany(filters.currency, filters.currencies);
+		if (currency) baseQs.currency = currency;
 		if (filters.showInCatalog !== undefined) baseQs.showInCatalog = filters.showInCatalog;
 		if (filters.categoryIds) baseQs.categoryIds = splitCsv(filters.categoryIds as string);
+		applySort(ctx, i, baseQs);
 		return paginateList(ctx, i, '/v1/products', baseQs);
 	}
 
@@ -160,7 +117,7 @@ async function executeProduct(
 
 		const binaryPropertyNames = splitCsv(imageBinaryProperty);
 		if (binaryPropertyNames.length > 0) {
-			const images = await collectImageParts(ctx, i, binaryPropertyNames);
+			const images = await collectImageParts(ctx, i, binaryPropertyNames, 'product');
 			const body: IDataObject = { data: JSON.stringify(dataFields), images };
 			const result = await turboDocxApiRequest(
 				ctx,
@@ -225,7 +182,7 @@ async function executeProduct(
 
 		const binaryPropertyNames = splitCsv(imageBinaryProperty);
 		if (binaryPropertyNames.length > 0) {
-			const images = await collectImageParts(ctx, i, binaryPropertyNames);
+			const images = await collectImageParts(ctx, i, binaryPropertyNames, 'product');
 			const body: IDataObject = { data: JSON.stringify(dataFields), images };
 			const result = await turboDocxApiRequest(
 				ctx,
@@ -263,7 +220,12 @@ async function executeProduct(
 		const productId = ctx.getNodeParameter('productId', i) as string;
 		const result = await turboDocxApiRequest(
 			ctx,
-			{ method: 'POST', endpoint: `/v1/products/${productId}/duplicate`, unwrap: 'result' },
+			{
+				method: 'POST',
+				endpoint: `/v1/products/${productId}/duplicate`,
+				body: duplicateBody(ctx, i),
+				unwrap: 'result',
+			},
 			i,
 		);
 		return [{ json: result }];
@@ -282,6 +244,28 @@ async function executeProduct(
 			{
 				method: 'POST',
 				endpoint: '/v1/products/primary-images',
+				body: { productIds },
+				unwrap: 'smart',
+			},
+			i,
+		);
+		const map = (result.results as IDataObject) ?? result;
+		return [{ json: map }];
+	}
+
+	if (operation === 'quoteImages') {
+		const productIds = parseJsonParameter(
+			ctx,
+			ctx.getNodeParameter('productIds', i) as string,
+			'productIds',
+			i,
+		) as string[];
+		// POST /v1/products/quote-images -> { results: { [productId]: image[] } } (up to three each)
+		const result = await turboDocxApiRequest(
+			ctx,
+			{
+				method: 'POST',
+				endpoint: '/v1/products/quote-images',
 				body: { productIds },
 				unwrap: 'smart',
 			},
@@ -311,6 +295,7 @@ async function executePriceBook(
 			baseQs.showInQuoteBuilder = filters.showInQuoteBuilder;
 		if (filters.priceBookTypeIds)
 			baseQs.priceBookTypeIds = splitCsv(filters.priceBookTypeIds as string);
+		applySort(ctx, i, baseQs);
 		return paginateList(ctx, i, '/v1/pricebooks', baseQs);
 	}
 
@@ -397,6 +382,8 @@ async function executePriceBook(
 		if (updateFields.isDefault !== undefined) body.isDefault = updateFields.isDefault;
 		if (updateFields.showInQuoteBuilder !== undefined)
 			body.showInQuoteBuilder = updateFields.showInQuoteBuilder;
+		// Puts every product back on the book's discount (before any productPricing in this request)
+		if (updateFields.resetProductPricing === true) body.resetProductPricing = true;
 		if (
 			updateFields.productPricing !== undefined &&
 			updateFields.productPricing !== '' &&
@@ -432,7 +419,12 @@ async function executePriceBook(
 		const priceBookId = ctx.getNodeParameter('priceBookId', i) as string;
 		const result = await turboDocxApiRequest(
 			ctx,
-			{ method: 'POST', endpoint: `/v1/pricebooks/${priceBookId}/duplicate`, unwrap: 'result' },
+			{
+				method: 'POST',
+				endpoint: `/v1/pricebooks/${priceBookId}/duplicate`,
+				body: duplicateBody(ctx, i),
+				unwrap: 'result',
+			},
 			i,
 		);
 		return [{ json: result }];
@@ -454,9 +446,11 @@ async function executeBundle(
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
-		if (filters.currency) baseQs.currency = filters.currency;
+		const currency = oneOrMany(filters.currency, filters.currencies);
+		if (currency) baseQs.currency = currency;
 		if (filters.showInCatalog !== undefined) baseQs.showInCatalog = filters.showInCatalog;
 		if (filters.categoryIds) baseQs.categoryIds = splitCsv(filters.categoryIds as string);
+		applySort(ctx, i, baseQs);
 		return paginateList(ctx, i, '/v1/bundles', baseQs);
 	}
 
@@ -564,7 +558,12 @@ async function executeBundle(
 		const bundleId = ctx.getNodeParameter('bundleId', i) as string;
 		const result = await turboDocxApiRequest(
 			ctx,
-			{ method: 'POST', endpoint: `/v1/bundles/${bundleId}/duplicate`, unwrap: 'result' },
+			{
+				method: 'POST',
+				endpoint: `/v1/bundles/${bundleId}/duplicate`,
+				body: duplicateBody(ctx, i),
+				unwrap: 'result',
+			},
 			i,
 		);
 		return [{ json: result }];

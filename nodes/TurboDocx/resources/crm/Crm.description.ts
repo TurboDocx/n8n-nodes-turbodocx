@@ -1,4 +1,5 @@
 import { INodeProperties } from 'n8n-workflow';
+import { sortCollection } from '../../shared/turboQuoteOptions';
 
 const COMPANY = ['company'];
 const CONTACT = ['contact'];
@@ -43,7 +44,7 @@ export const companyOperations: INodeProperties[] = [
 			{
 				name: 'Delete',
 				value: 'delete',
-				description: 'Delete a company',
+				description: 'Delete a company and its contacts. Refused while it has open quotes (see Get Open Quotes).',
 				action: 'Delete a company',
 			},
 			{
@@ -57,6 +58,12 @@ export const companyOperations: INodeProperties[] = [
 				value: 'list',
 				description: 'List companies with search and pagination',
 				action: 'Get many companies',
+			},
+			{
+				name: 'Get Open Quotes',
+				value: 'listOpenQuotes',
+				description: "Get the company's open quotes (draft, pending approval, sent): what blocks deleting it",
+				action: 'Get open quotes of a company',
 			},
 			{
 				name: 'List Contacts',
@@ -85,7 +92,7 @@ const companyIdField: INodeProperties = {
 	displayOptions: {
 		show: {
 			resource: COMPANY,
-			operation: ['get', 'update', 'delete', 'listContacts'],
+			operation: ['get', 'update', 'delete', 'listContacts', 'listOpenQuotes'],
 		},
 	},
 };
@@ -164,6 +171,14 @@ export const companyFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'Country of the company',
+			},
+			{
+				displayName: 'Email',
+				name: 'email',
+				type: 'string',
+				placeholder: 'name@email.com',
+				default: '',
+				description: "The company's own email address",
 			},
 			{
 				displayName: 'Industry ID',
@@ -288,6 +303,14 @@ export const companyFields: INodeProperties[] = [
 				description: 'Updated country. Leave empty to clear.',
 			},
 			{
+				displayName: 'Email',
+				name: 'email',
+				type: 'string',
+				placeholder: 'name@email.com',
+				default: '',
+				description: "Updated company email. Leave empty to clear.",
+			},
+			{
 				displayName: 'Industry ID',
 				name: 'industryId',
 				type: 'string',
@@ -317,6 +340,25 @@ export const companyFields: INodeProperties[] = [
 			},
 		],
 	},
+	sortCollection(
+		COMPANY,
+		['list'],
+		[
+			{ name: 'Contacts', value: 'contactCount' },
+			{ name: 'Last Activity', value: 'lastActivityDate' },
+			{ name: 'Name', value: 'name' },
+		],
+		'most recently active first',
+	),
+	sortCollection(
+		COMPANY,
+		['listContacts'],
+		[
+			{ name: 'Created', value: 'createdOn' },
+			{ name: 'Name', value: 'name' },
+		],
+		'newest first',
+	),
 ];
 
 // =====================================================================
@@ -350,7 +392,7 @@ export const contactOperations: INodeProperties[] = [
 			{
 				name: 'Delete',
 				value: 'delete',
-				description: 'Delete a contact',
+				description: "Delete a contact. Refused for the company's only contact or a contact on open quotes.",
 				action: 'Delete a contact',
 			},
 			{
@@ -358,6 +400,12 @@ export const contactOperations: INodeProperties[] = [
 				value: 'list',
 				description: 'List contacts with search and pagination',
 				action: 'Get many contacts',
+			},
+			{
+				name: 'Get Open Quotes',
+				value: 'listOpenQuotes',
+				description: 'Get the open quotes made out to the contact: what blocks deleting them',
+				action: 'Get open quotes of a contact',
 			},
 			{
 				name: 'Update',
@@ -380,7 +428,7 @@ const contactIdField: INodeProperties = {
 	displayOptions: {
 		show: {
 			resource: CONTACT,
-			operation: ['update', 'delete'],
+			operation: ['update', 'delete', 'listOpenQuotes'],
 		},
 	},
 };
@@ -509,6 +557,13 @@ export const contactFields: INodeProperties[] = [
 				description: 'Filter contacts by the company they belong to',
 			},
 			{
+				displayName: 'Company IDs',
+				name: 'companyIds',
+				type: 'string',
+				default: '',
+				description: 'Comma-separated list of company UUIDs; contacts of any of them',
+			},
+			{
 				displayName: 'Search Query',
 				name: 'query',
 				type: 'string',
@@ -562,6 +617,15 @@ export const contactFields: INodeProperties[] = [
 			},
 		],
 	},
+	sortCollection(
+		CONTACT,
+		['list'],
+		[
+			{ name: 'Created', value: 'createdOn' },
+			{ name: 'Name', value: 'name' },
+		],
+		'newest first',
+	),
 ];
 
 // =====================================================================
@@ -990,4 +1054,13 @@ export const quoteTypeFields: INodeProperties[] = [
 			},
 		],
 	},
+	sortCollection(
+		QUOTE_TYPE,
+		['list'],
+		[
+			{ name: 'Name', value: 'name' },
+			{ name: 'Usage', value: 'usageCount' },
+		],
+		'A to Z by name (sorting by usage needs a Category Type filter)',
+	),
 ];

@@ -5,6 +5,41 @@ import {
 	parseJsonParameter,
 	paginatedList,
 } from '../../shared/GenericFunctions';
+import {
+	applySort,
+	collectImageParts,
+	duplicateBody,
+	splitCsv,
+} from '../../shared/turboQuoteOptions';
+
+/** A dateTime parameter as the API's YYYY-MM-DD day. */
+function toDay(value: unknown): string | undefined {
+	return typeof value === 'string' && value ? value.slice(0, 10) : undefined;
+}
+
+/**
+ * The quote list filters (shared by Get Many and Get Summary). Multi-value filters go out as
+ * arrays (repeated params); the single Company ID / Currency still work and the API merges them.
+ */
+function quoteListQs(filters: IDataObject): IDataObject {
+	const qs: IDataObject = {};
+	if (filters.query) qs.query = filters.query;
+	if (filters.companyId) qs.companyId = filters.companyId;
+	if (filters.companyIds) qs.companyIds = splitCsv(filters.companyIds as string);
+	if (filters.contactId) qs.contactId = filters.contactId;
+	if (filters.currency) qs.currency = filters.currency;
+	if (Array.isArray(filters.currencies) && filters.currencies.length > 0) qs.currencies = filters.currencies;
+	if (Array.isArray(filters.statuses) && filters.statuses.length > 0) qs.statuses = filters.statuses;
+	if (filters.createdBy) qs.createdBy = splitCsv(filters.createdBy as string);
+	if (filters.createdByApiKeys === true) qs.createdByApiKeys = true;
+	if (filters.validUntilWindow) qs.validUntilWindow = filters.validUntilWindow;
+	const from = toDay(filters.validUntilFrom);
+	if (from) qs.validUntilFrom = from;
+	const to = toDay(filters.validUntilTo);
+	if (to) qs.validUntilTo = to;
+	if (filters.summaryCurrency) qs.summaryCurrency = filters.summaryCurrency;
+	return qs;
+}
 
 /**
  * `renewalPeriod` is coupled to `termDays`: the backend's quote schemas accept it only for an
@@ -173,17 +208,32 @@ async function executeQuoteResource(
 
 	if (operation === 'list') {
 		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
-		const baseQs: IDataObject = {};
-		if (filters.query) baseQs.query = filters.query;
-		if (filters.companyId) baseQs.companyId = filters.companyId;
-		if (filters.contactId) baseQs.contactId = filters.contactId;
-		if (filters.currency) baseQs.currency = filters.currency;
-		if (Array.isArray(filters.statuses) && filters.statuses.length > 0) {
-			baseQs.statuses = filters.statuses;
-		}
+		const baseQs = quoteListQs(filters);
+		applySort(ctx, i, baseQs);
 
 		const records = await paginatedList(ctx, { endpoint: '/v1/quotes', i, baseQs });
 		return records.map((r) => ({ json: r }));
+	}
+
+	if (operation === 'getSummary') {
+		// The status filter doesn't apply to the summary; the API ignores it.
+		const filters = ctx.getNodeParameter('filters', i, {}) as IDataObject;
+		const qs = quoteListQs(filters);
+		const body = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint: '/v1/quotes/summary', qs, unwrap: 'smart' },
+			i,
+		);
+		return [{ json: (body.summary as IDataObject) ?? body }];
+	}
+
+	if (operation === 'listCreators') {
+		const body = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint: '/v1/quotes/creators', unwrap: 'smart' },
+			i,
+		);
+		return ((body.results as IDataObject[]) ?? []).map((creator) => ({ json: creator }));
 	}
 
 	if (operation === 'update') {
@@ -240,7 +290,12 @@ async function executeQuoteResource(
 		const quoteId = ctx.getNodeParameter('quoteId', i) as string;
 		const result = await turboDocxApiRequest(
 			ctx,
-			{ method: 'POST', endpoint: `/v1/quotes/${quoteId}/duplicate`, unwrap: 'result' },
+			{
+				method: 'POST',
+				endpoint: `/v1/quotes/${quoteId}/duplicate`,
+				body: duplicateBody(ctx, i),
+				unwrap: 'result',
+			},
 			i,
 		);
 		return [{ json: result }];
@@ -580,6 +635,57 @@ async function executeQuoteLineItemResource(
 		return [{ json: result }];
 	}
 
+	// Custom line item images: up to three per custom item (a line with no catalog product),
+	// PNG or JPEG, 2MB each. Changes are allowed on draft quotes only.
+	if (operation === 'getQuoteImages') {
+		const body = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint: `/v1/quotes/${quoteId}/items/images`, unwrap: 'smart' },
+			i,
+		);
+		// { results: { [lineItemId]: image[] } } — one item holding the map
+		return [{ json: (body.results as IDataObject) ?? body }];
+	}
+
+	if (
+		operation === 'getImages' ||
+		operation === 'addImages' ||
+		operation === 'reorderImages' ||
+		operation === 'removeImage'
+	) {
+		const itemId = ctx.getNodeParameter('itemId', i) as string;
+		const imagesPath = `/v1/quotes/${quoteId}/items/${itemId}/images`;
+		let body: IDataObject;
+
+		if (operation === 'getImages') {
+			body = await turboDocxApiRequest(ctx, { method: 'GET', endpoint: imagesPath, unwrap: 'smart' }, i);
+		} else if (operation === 'addImages') {
+			const names = splitCsv(ctx.getNodeParameter('imageBinaryProperty', i) as string);
+			const images = await collectImageParts(ctx, i, names, 'line item');
+			body = await turboDocxApiRequest(
+				ctx,
+				{ method: 'POST', endpoint: imagesPath, body: { images }, multipart: true, unwrap: 'smart' },
+				i,
+			);
+		} else if (operation === 'reorderImages') {
+			const imageIds = splitCsv(ctx.getNodeParameter('imageIds', i) as string);
+			body = await turboDocxApiRequest(
+				ctx,
+				{ method: 'PUT', endpoint: `${imagesPath}/order`, body: { imageIds }, unwrap: 'smart' },
+				i,
+			);
+		} else {
+			const imageId = ctx.getNodeParameter('imageId', i) as string;
+			body = await turboDocxApiRequest(
+				ctx,
+				{ method: 'DELETE', endpoint: `${imagesPath}/${imageId}`, unwrap: 'smart' },
+				i,
+			);
+		}
+		// Each call returns the line item's images (after the change): one item per image
+		return ((body.results as IDataObject[]) ?? []).map((image) => ({ json: image }));
+	}
+
 	throw new NodeOperationError(ctx.getNode(), `Unknown Quote Line Item operation: ${operation}`, { itemIndex: i });
 }
 
@@ -598,6 +704,16 @@ async function executeQuoteNumberConfigResource(
 		const body = await turboDocxApiRequest(
 			ctx,
 			{ method: 'GET', endpoint: '/v1/quotes/number-config', unwrap: 'smart' },
+			i,
+		);
+		return [{ json: (body.results as IDataObject) ?? body }];
+	}
+
+	if (operation === 'getNext') {
+		// The number the next new quote will get. Read only: the counter doesn't move.
+		const body = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint: '/v1/quotes/number-config/next', unwrap: 'smart' },
 			i,
 		);
 		return [{ json: (body.results as IDataObject) ?? body }];
