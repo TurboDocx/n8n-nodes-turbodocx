@@ -27,7 +27,6 @@ const LIST_STATUS_OPTIONS = [
 	{ name: 'Declined', value: 'declined' },
 	{ name: 'Draft', value: 'draft' },
 	{ name: 'Expired', value: 'expired' },
-	{ name: 'Pending Approval', value: 'pending_approval' },
 	{ name: 'Sent', value: 'sent' },
 	{ name: 'Voided', value: 'voided' },
 ];
