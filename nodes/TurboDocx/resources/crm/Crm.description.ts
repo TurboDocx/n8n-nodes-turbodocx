@@ -62,7 +62,7 @@ export const companyOperations: INodeProperties[] = [
 			{
 				name: 'Get Open Quotes',
 				value: 'listOpenQuotes',
-				description: "Get the company's open quotes (draft, pending approval, sent): what blocks deleting it",
+				description: "Get the company's open quotes (draft or sent): what blocks deleting it",
 				action: 'Get open quotes of a company',
 			},
 			{

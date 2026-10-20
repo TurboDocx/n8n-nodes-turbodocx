@@ -136,7 +136,7 @@ async function executeCompany(
 	}
 
 	if (operation === 'listOpenQuotes') {
-		// The open quotes (draft, pending approval, sent) that block deleting the company:
+		// The open quotes (draft or sent) that block deleting the company:
 		// { results (newest 50), totalRecords }, kept as one item so a workflow can check
 		// totalRecords before a delete.
 		const companyId = ctx.getNodeParameter('companyId', i) as string;
