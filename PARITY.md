@@ -250,7 +250,7 @@ mirror the [cross-SDK parity rule's exclusion list](https://github.com/TurboDocx
 |---|---|---|
 | TurboQuote | `POST /v1/quotes/number-config/preview-floor` | Frontend live-preview helper |
 | TurboQuote | `POST /v1/quotes/{id}/items/reorder`, `/items/category-order` | Drag-and-drop presentation only |
-| TurboQuote | approval-workflow family (`/v1/quotes/workflows*`, `/{id}/approve`, `/approval-requests`, `/{id}/approval-activity`) | Backend feature not yet production-complete; revisit when it ships |
+| TurboQuote | Unreleased quote features (endpoints, fields or statuses the product UI doesn't offer yet) | Not wrapped until they ship |
 | TurboSign | `GET /turbosign/documents/signature-documents` (list) + `/turbosign/bulk/*` mail-merge family | Deferred to a future pass, not rejected |
 | TurboSign | two-step prep flow (`upload` / `from-deliverable` / `from-template` / `update-with-recipients` / per-doc `prepare-for-*`) | Single-step endpoints already wrapped accept file/fileLink/deliverableId/templateId and cover the API use case |
 | Deliverable | `/deliverable-folder`, `/deliverable-item` (org-content organization), `previewpdflink`, `pdf/{filename}` | Unversioned / UI-only |
