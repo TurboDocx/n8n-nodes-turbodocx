@@ -100,16 +100,20 @@ Full CPQ surface, modelled as several resources for an intuitive UX:
 
 | Resource | Operations |
 |----------|-----------|
-| **Quote** | Get Many, Create, Get, Update, Delete, Duplicate, Apply/Remove Price Book, Download PDF, Send, Send With Deliverable, Decline, Void, Handle Expired, **Create and Send** (one-step macro) |
-| **Quote Line Item** | Get Many, Add, Add Bundle, Update, Remove |
-| **Quote Number Config** | Get, Update (org-wide quote numbering format) |
-| **Product** | Get Many, Bulk Create, Create, Get, Update, Delete, Duplicate, Primary Images (supports binary image upload) |
+| **Quote** | Get Many, Get Summary, Get Creators, Create, Get, Update, Delete, Duplicate, Apply/Remove Price Book, Download PDF, Send, Send With Deliverable, Decline, Void, Handle Expired, **Create and Send** (one-step macro) |
+| **Quote Line Item** | Get Many, Add, Add Bundle, Update, Remove, Add / Get / Reorder / Remove Images (custom line items), Get Quote Images |
+| **Quote Number Config** | Get, Update (org-wide quote numbering format), Get Next Number |
+| **Product** | Get Many, Bulk Create, Create, Get, Update, Delete, Duplicate, Primary Images, Quote Images (supports binary image upload, up to 3 images) |
 | **Price Book** | Get Many, Bulk Create, Create, Get, Update, Delete, Duplicate, List Products |
 | **Bundle** | Get Many, Bulk Create, Create, Get, Update, Delete, Duplicate |
-| **Company** | Get Many, Bulk Create, Create, Get, Update, Delete, List Contacts |
-| **Contact** | Get Many, Bulk Create, Create, Update, Delete |
+| **Company** | Get Many, Bulk Create, Create, Get, Update, Delete, List Contacts, Get Open Quotes |
+| **Contact** | Get Many, Bulk Create, Create, Update, Delete, Get Open Quotes |
 | **Quote Template** | Get Many, Get Default, Get, Create, Update, Delete |
 | **Quote Type** | Get Many, Bulk Create, Create, Update, Delete |
+
+**Sorting and filters**: every TurboQuote Get Many has a **Sort** option (for example quotes by Total, Valid Until or Quote Number; products by List Price; companies by Contacts). Leave it out to keep the list's usual order. Quote → Get Many also filters by several companies and currencies, by **Expired** (a draft or sent quote past its Valid Until day, or whose signature expired), by creator (IDs from **Get Creators**, or any API key) and by a Valid Until window or dates. **Duplicate** (quote, product, price book, bundle) takes an optional name for the copy.
+
+**Deletes the API refuses**: a **sent** quote can't be deleted (void it instead) and neither can an accepted one; a company or contact on open quotes, or a company's last contact, can't be deleted (use **Get Open Quotes** to see what blocks it); nor can the default price book. The node error carries the API's reason and code (e.g. `CANNOT_DELETE_SENT_QUOTE`).
 
 **Reminder & Expiration Schedule (quote Send / Send With Deliverable / Create and Send)**: these send operations accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, cap) plus per-quote expiration and its warning cadence. Leave any field out to inherit your organization's defaults. Quote constraint: expiry is pinned to the quote's Valid Until (so Expire After is ignored while expiration is on), and the reminder/warning cadence must fit inside Valid Until or the send is rejected.
 
