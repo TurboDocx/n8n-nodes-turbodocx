@@ -1,4 +1,5 @@
 import { INodeProperties } from 'n8n-workflow';
+import { duplicateFieldsCollection, sortCollection } from '../../shared/turboQuoteOptions';
 
 const QUOTE = ['quote'];
 const LINE_ITEM = ['quoteLineItem'];
@@ -20,11 +21,12 @@ const RENEWAL_OPTIONS = [
 	{ name: 'Weekly', value: 'weekly' },
 ];
 
-const STATUS_OPTIONS = [
+/** The list's status filter: the stored statuses plus "Expired" (not a stored status). */
+const LIST_STATUS_OPTIONS = [
 	{ name: 'Accepted', value: 'accepted' },
 	{ name: 'Declined', value: 'declined' },
 	{ name: 'Draft', value: 'draft' },
-	{ name: 'Pending Approval', value: 'pending_approval' },
+	{ name: 'Expired', value: 'expired' },
 	{ name: 'Sent', value: 'sent' },
 	{ name: 'Voided', value: 'voided' },
 ];
@@ -89,7 +91,7 @@ export const quoteOperations: INodeProperties[] = [
 			{
 				name: 'Delete',
 				value: 'delete',
-				description: 'Delete a quote',
+				description: 'Delete a quote. A sent quote is refused (void it instead), and so is an accepted one.',
 				action: 'Delete a quote',
 			},
 			{
@@ -111,10 +113,22 @@ export const quoteOperations: INodeProperties[] = [
 				action: 'Get a quote',
 			},
 			{
+				name: 'Get Creators',
+				value: 'listCreators',
+				description: "List the people and API keys who created the organization's quotes (IDs for the Created By filter)",
+				action: 'Get quote creators',
+			},
+			{
 				name: 'Get Many',
 				value: 'list',
 				description: 'List quotes with filters and pagination',
 				action: 'Get many quotes',
+			},
+			{
+				name: 'Get Summary',
+				value: 'getSummary',
+				description: "Get the quote list's summary cards (pipeline, win rate, monthly recurring) for a set of filters: amounts in the summary currency, counts across every currency",
+				action: 'Get the quote summary',
 			},
 			{
 				name: 'Handle Expired',
@@ -431,7 +445,7 @@ export const quoteFields: INodeProperties[] = [
 		placeholder: 'Add Filter',
 		default: {},
 		displayOptions: {
-			show: { resource: QUOTE, operation: ['list'] },
+			show: { resource: QUOTE, operation: ['list', 'getSummary'] },
 		},
 		options: [
 			{
@@ -442,11 +456,41 @@ export const quoteFields: INodeProperties[] = [
 				description: 'Filter quotes by company UUID',
 			},
 			{
+				displayName: 'Company IDs',
+				name: 'companyIds',
+				type: 'string',
+				default: '',
+				description: 'Comma-separated list of company UUIDs; quotes for any of them',
+			},
+			{
 				displayName: 'Contact ID',
 				name: 'contactId',
 				type: 'string',
 				default: '',
 				description: 'Filter quotes by contact UUID',
+			},
+			{
+				displayName: 'Created By',
+				name: 'createdBy',
+				type: 'string',
+				default: '',
+				description:
+					'Comma-separated list of user IDs (from Get Creators); quotes created by any of them',
+			},
+			{
+				displayName: 'Created by API Keys',
+				name: 'createdByApiKeys',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to include quotes created by any API key (combined with Created By)',
+			},
+			{
+				displayName: 'Currencies',
+				name: 'currencies',
+				type: 'multiOptions',
+				options: CURRENCY_OPTIONS,
+				default: [],
+				description: 'Quotes in any of these currencies',
 			},
 			{
 				displayName: 'Currency',
@@ -461,15 +505,52 @@ export const quoteFields: INodeProperties[] = [
 				name: 'query',
 				type: 'string',
 				default: '',
-				description: 'Filter quotes by name or quote number',
+				description:
+					'Filter quotes by quote number, name, company name, contact name or contact email',
 			},
 			{
 				displayName: 'Statuses',
 				name: 'statuses',
 				type: 'multiOptions',
-				options: STATUS_OPTIONS,
+				options: LIST_STATUS_OPTIONS,
 				default: [],
-				description: 'Filter quotes by one or more statuses',
+				description:
+					'Filter quotes by one or more statuses. Expired = a draft or sent quote past its Valid Until day (UTC), or whose signature expired. Ignored by Get Summary.',
+			},
+			{
+				displayName: 'Summary Currency',
+				name: 'summaryCurrency',
+				type: 'options',
+				options: CURRENCY_OPTIONS,
+				default: 'USD',
+				description:
+					'Currency of the summary amounts (default: the one filtered currency, else USD); counts and the win rate cover every currency. Get Many returns it as `summary` on the list; Get Summary returns it alone.',
+			},
+			{
+				displayName: 'Valid Until From',
+				name: 'validUntilFrom',
+				type: 'dateTime',
+				default: '',
+				description: 'Quotes valid until this day or later',
+			},
+			{
+				displayName: 'Valid Until To',
+				name: 'validUntilTo',
+				type: 'dateTime',
+				default: '',
+				description: 'Quotes valid until this day or earlier',
+			},
+			{
+				displayName: 'Valid Until Window',
+				name: 'validUntilWindow',
+				type: 'options',
+				options: [
+					{ name: 'Past', value: 'past' },
+					{ name: 'This Month', value: 'thisMonth' },
+					{ name: 'This Week (Next 7 Days)', value: 'thisWeek' },
+				],
+				default: 'thisWeek',
+				description: 'Quotes whose Valid Until falls in this window (UTC days)',
 			},
 		],
 	},
@@ -936,6 +1017,19 @@ export const quoteFields: INodeProperties[] = [
 			},
 		],
 	},
+	sortCollection(
+		QUOTE,
+		['list'],
+		[
+			{ name: 'Created', value: 'createdOn' },
+			{ name: 'Quote Number', value: 'quoteNumber' },
+			{ name: 'Total', value: 'total' },
+			{ name: 'Updated', value: 'updatedOn' },
+			{ name: 'Valid Until', value: 'validUntil' },
+		],
+		'newest created first',
+	),
+	duplicateFieldsCollection(QUOTE),
 ];
 
 // ===================================================================
@@ -967,16 +1061,46 @@ export const quoteLineItemOperations: INodeProperties[] = [
 				action: 'Add bundle line items to a quote',
 			},
 			{
+				name: 'Add Images',
+				value: 'addImages',
+				description: 'Add images to a custom line item (up to three, PNG or JPEG, draft quotes only)',
+				action: 'Add images to a line item',
+			},
+			{
+				name: 'Get Images',
+				value: 'getImages',
+				description: "Get a custom line item's images, in order",
+				action: 'Get images of a line item',
+			},
+			{
 				name: 'Get Many',
 				value: 'list',
 				description: 'List line items on a quote',
 				action: 'Get many line items',
 			},
 			{
+				name: 'Get Quote Images',
+				value: 'getQuoteImages',
+				description: "Get every custom line item's images on a quote, keyed by line item ID",
+				action: 'Get the line item images of a quote',
+			},
+			{
 				name: 'Remove',
 				value: 'remove',
 				description: 'Remove a line item from a quote',
 				action: 'Remove a line item',
+			},
+			{
+				name: 'Remove Image',
+				value: 'removeImage',
+				description: 'Remove one image from a custom line item',
+				action: 'Remove an image from a line item',
+			},
+			{
+				name: 'Reorder Images',
+				value: 'reorderImages',
+				description: "Set the order of a custom line item's images",
+				action: 'Reorder the images of a line item',
 			},
 			{
 				name: 'Update',
@@ -1003,7 +1127,18 @@ const lineItemQuoteIdField: INodeProperties = {
 	displayOptions: {
 		show: {
 			resource: LINE_ITEM,
-			operation: ['list', 'add', 'addBundle', 'update', 'remove'],
+			operation: [
+				'list',
+				'add',
+				'addBundle',
+				'update',
+				'remove',
+				'addImages',
+				'getImages',
+				'getQuoteImages',
+				'removeImage',
+				'reorderImages',
+			],
 		},
 	},
 };
@@ -1018,7 +1153,7 @@ const lineItemIdField: INodeProperties = {
 	displayOptions: {
 		show: {
 			resource: LINE_ITEM,
-			operation: ['update', 'remove'],
+			operation: ['update', 'remove', 'addImages', 'getImages', 'removeImage', 'reorderImages'],
 		},
 	},
 };
@@ -1026,6 +1161,46 @@ const lineItemIdField: INodeProperties = {
 export const quoteLineItemFields: INodeProperties[] = [
 	lineItemQuoteIdField,
 	lineItemIdField,
+
+	// ===============================
+	// Custom line item images
+	// ===============================
+	{
+		displayName: 'Image Binary Property',
+		name: 'imageBinaryProperty',
+		type: 'string',
+		required: true,
+		default: 'data',
+		description:
+			'Comma-separated list of input binary property names to upload as images (e.g. "data" or "image0,image1"). Up to three per line item, PNG or JPEG, 2 MB each.',
+		placeholder: 'data',
+		displayOptions: {
+			show: { resource: LINE_ITEM, operation: ['addImages'] },
+		},
+	},
+	{
+		displayName: 'Image IDs',
+		name: 'imageIds',
+		type: 'string',
+		required: true,
+		default: '',
+		description: "Comma-separated list of the line item's image IDs, first to last",
+		placeholder: 'img-uuid-2,img-uuid-1',
+		displayOptions: {
+			show: { resource: LINE_ITEM, operation: ['reorderImages'] },
+		},
+	},
+	{
+		displayName: 'Image ID',
+		name: 'imageId',
+		type: 'string',
+		required: true,
+		default: '',
+		description: 'UUID of the image to remove',
+		displayOptions: {
+			show: { resource: LINE_ITEM, operation: ['removeImage'] },
+		},
+	},
 
 	// ===============================
 	// Add (products)
@@ -1285,6 +1460,12 @@ export const quoteNumberConfigOperations: INodeProperties[] = [
 				value: 'get',
 				description: 'Get the organization quote number config',
 				action: 'Get the quote number config',
+			},
+			{
+				name: 'Get Next Number',
+				value: 'getNext',
+				description: 'Get the number the next new quote will get (read only; the counter does not move)',
+				action: 'Get the next quote number',
 			},
 			{
 				name: 'Update',
