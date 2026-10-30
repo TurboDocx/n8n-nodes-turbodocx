@@ -127,7 +127,7 @@ export const quoteOperations: INodeProperties[] = [
 			{
 				name: 'Get Summary',
 				value: 'getSummary',
-				description: "Get the quote list's summary cards (pipeline, win rate, monthly recurring) for a set of filters",
+				description: "Get the quote list's summary cards (pipeline, win rate, monthly recurring) for a set of filters: amounts in the summary currency, counts across every currency",
 				action: 'Get the quote summary',
 			},
 			{
@@ -524,7 +524,7 @@ export const quoteFields: INodeProperties[] = [
 				options: CURRENCY_OPTIONS,
 				default: 'USD',
 				description:
-					'Currency of the summary (default: the one filtered currency, else USD). Get Many returns it as `summary` on the list; Get Summary returns it alone.',
+					'Currency of the summary amounts (default: the one filtered currency, else USD); counts and the win rate cover every currency. Get Many returns it as `summary` on the list; Get Summary returns it alone.',
 			},
 			{
 				displayName: 'Valid Until From',
