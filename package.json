@@ -45,6 +45,7 @@
     },
     "scripts": {
         "build": "n8n-node build",
+        "typecheck": "tsrs --noEmit -p tsconfig.typecheck.json --checkers 4",
         "build:watch": "tsc --watch",
         "dev": "n8n-node dev",
         "lint": "n8n-node lint",
@@ -78,6 +79,7 @@
         "prettier": "3.6.2",
         "release-it": "^19.0.4",
         "ts-jest": "^29.2.5",
+        "tsrs": "0.18.0-ts7.1.0-dev.20260929",
         "typescript": "5.9.2"
     },
     "peerDependencies": {
