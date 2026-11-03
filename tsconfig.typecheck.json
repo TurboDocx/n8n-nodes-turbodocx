@@ -1,0 +1,7 @@
+{
+  // tsrs (TS 7) only, used by `npm run typecheck`.
+  // Dev boxes and PR CI use tsrs; staging/production builds, deploys and publishes still use regular tsc with tsconfig.json. tsconfig.json still drives the emit on TS 5.x, which needs
+  // moduleResolution "node"; TS 7 removed that option.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "moduleResolution": "bundler", "noEmit": true, "incremental": false, "types": ["node"] }
+}
