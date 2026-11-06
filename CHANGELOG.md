@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Template signer roles.** Recipients can name a template's signer `role`, and the fields saved
   for that role are used. New operation **Get Template Signature Setup** lists a template's roles.
+- **Template signature anchors.** New operations **Add Template Signature Anchor** and **Remove
+  Template Signature Anchor** add and remove anchored fields (a field tied to a tag like
+  `{ClientSign}` for one role) on a template's saved signature setup. Get Template Signature Setup
+  also returns `anchors` and each role's `anchoredFieldCount`.
 
 ### Changed
 
