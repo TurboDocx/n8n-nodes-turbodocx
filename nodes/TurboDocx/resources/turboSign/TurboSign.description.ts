@@ -230,6 +230,14 @@ export const turboSignFields: INodeProperties[] = [
 		},
 		options: [
 			{
+				displayName: 'Apply Signature Setup',
+				name: 'applySignatureSetup',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to use the template\'s saved signature setup: a field whose template anchor and type match an anchored field of the setup fits its tag, and a tag missing from the document is skipped instead of failing the request. Only has an effect with a Template or Deliverable source (the deliverable\'s template), and on recipients that name no role.',
+			},
+			{
 				displayName: 'CC Emails',
 				name: 'ccEmails',
 				type: 'json',

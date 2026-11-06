@@ -64,6 +64,7 @@ interface ITurboSignAdditionalFields {
 	senderName?: string;
 	senderEmail?: string;
 	ccEmails?: string;
+	applySignatureSetup?: boolean;
 }
 
 /**
@@ -120,6 +121,7 @@ interface ITurboSignRequestBody extends IDataObject {
 	fileLink?: string;
 	deliverableId?: string;
 	templateId?: string;
+	applySignatureSetup?: string;
 }
 
 /**
@@ -232,6 +234,14 @@ async function buildPrepareBody(
 	} else if (fileInputMethod === 'template') {
 		requestBody.templateId = ctx.getNodeParameter('templateId', i) as string;
 	}
+
+	// Only a template or deliverable source has a saved signature setup to apply. Sent when set
+	// (an explicit false too), as a string because the multipart helper takes string parts only.
+	if (
+		additionalFields.applySignatureSetup !== undefined &&
+		(fileInputMethod === 'template' || fileInputMethod === 'deliverable')
+	)
+		requestBody.applySignatureSetup = String(additionalFields.applySignatureSetup);
 
 	return requestBody;
 }

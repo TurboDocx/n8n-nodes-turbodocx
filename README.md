@@ -262,6 +262,8 @@ TurboSign supports **two methods** for placing signature fields on documents:
 | `above` | Place field above anchor |
 | `below` | Place field below anchor |
 
+**Apply Signature Setup:** when the source is a Template or Deliverable whose template has anchored fields saved in its signature setup, turn on **Additional Fields > Apply Signature Setup**. A field you send with a `template.anchor` and type that match a saved anchored field is treated as that field: it fits its tag, and a tag missing from the document is skipped instead of failing the request. It has no effect on uploaded files or file URLs.
+
 **Example:**
 ```json
 {
