@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **TurboSign: Apply Signature Setup.** Send Signature and Get Review Link take an optional
+  **Apply Signature Setup** option under Additional Fields. With a Template or Deliverable source,
+  a field whose template anchor and type match an anchored field of the template's saved signature
+  setup is treated as that field: it fits its tag, and a tag missing from the document is skipped
+  instead of failing the request. Existing workflows are unchanged.
+
 ## [1.4.1]
 
 ### Fixed
