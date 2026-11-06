@@ -15,6 +15,13 @@ export const turboSignOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Add Template Signature Anchor',
+				value: 'addTemplateSignatureAnchor',
+				description:
+					'Make a tag like {ClientSign} a signature field of one signer role on a template\'s saved signature setup',
+				action: 'Add template signature anchor',
+			},
+			{
 				name: 'Download Document',
 				value: 'downloadDocument',
 				description: 'Download the signed PDF document',
@@ -52,6 +59,12 @@ export const turboSignOperations: INodeProperties[] = [
 				description:
 					'List a template\'s signer roles, to send it with a role on each recipient',
 				action: 'Get template signature setup',
+			},
+			{
+				name: 'Remove Template Signature Anchor',
+				value: 'removeTemplateSignatureAnchor',
+				description: 'Remove an anchored field from a template\'s saved signature setup',
+				action: 'Remove template signature anchor',
 			},
 			{
 				name: 'Resend Email',
@@ -195,11 +208,121 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['getTemplateSignatureSetup'],
+				operation: [
+					'getTemplateSignatureSetup',
+					'addTemplateSignatureAnchor',
+					'removeTemplateSignatureAnchor',
+				],
 			},
 		},
 		default: '',
-		description: 'UUID of the TurboDocx template whose signer roles to list',
+		description: 'UUID of the TurboDocx template whose signature setup to read or change',
+		required: true,
+	},
+	{
+		displayName: 'Role Key',
+		name: 'roleKey',
+		type: 'string',
+		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
+		default: '',
+		description:
+			'Key of the signer role that fills the field, as listed by Get Template Signature Setup. On a template with no signer yet, signer_1 creates the first signer.',
+		required: true,
+	},
+	{
+		displayName: 'Field Type',
+		name: 'anchorFieldType',
+		type: 'options',
+		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
+		options: [
+			{ name: 'Checkbox', value: 'checkbox' },
+			{ name: 'Company', value: 'company' },
+			{ name: 'Date', value: 'date' },
+			{ name: 'Email', value: 'email' },
+			{ name: 'First Name', value: 'first_name' },
+			{ name: 'Full Name', value: 'full_name' },
+			{ name: 'Initial', value: 'initial' },
+			{ name: 'Last Name', value: 'last_name' },
+			{ name: 'Signature', value: 'signature' },
+			{ name: 'Text', value: 'text' },
+			{ name: 'Title', value: 'title' },
+		],
+		default: 'signature',
+		description: 'Type of the anchored field',
+	},
+	{
+		displayName: 'Anchor',
+		name: 'anchor',
+		type: 'string',
+		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
+		default: '',
+		placeholder: '{ClientSign}',
+		description: 'One tag in single braces with no spaces. The field is placed wherever the tag appears.',
+		required: true,
+	},
+	{
+		displayName: 'Anchor Options',
+		name: 'anchorOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
+		options: [
+			{
+				displayName: 'Default Value',
+				name: 'defaultValue',
+				type: 'string',
+				default: '',
+				description: 'Value the field is pre-filled with',
+			},
+			{
+				displayName: 'Offset',
+				name: 'offset',
+				type: 'json',
+				default: '',
+				placeholder: '{"x":0,"y":0}',
+				description: 'JSON object with x and y, in pixels, to shift the field from its tag',
+			},
+			{
+				displayName: 'Placement',
+				name: 'placement',
+				type: 'options',
+				options: [
+					{ name: 'Above', value: 'above' },
+					{ name: 'After', value: 'after' },
+					{ name: 'Before', value: 'before' },
+					{ name: 'Below', value: 'below' },
+					{ name: 'Replace', value: 'replace' },
+				],
+				default: 'replace',
+				description: 'Where the field sits relative to its tag',
+			},
+			{
+				displayName: 'Read Only',
+				name: 'isReadonly',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether the signer cannot change the field. A read-only field needs a default value, its own or its role\'s.',
+			},
+			{
+				displayName: 'Size',
+				name: 'size',
+				type: 'json',
+				default: '',
+				placeholder: '{"width":200,"height":50}',
+				description: 'JSON object with width and height of the field, in pixels',
+			},
+		],
+	},
+	{
+		displayName: 'Field ID',
+		name: 'fieldId',
+		type: 'string',
+		displayOptions: { show: { resource: RESOURCE, operation: ['removeTemplateSignatureAnchor'] } },
+		default: '',
+		description:
+			'ID of the anchored field, as returned by Add Template Signature Anchor or listed under anchors by Get Template Signature Setup',
 		required: true,
 	},
 	{

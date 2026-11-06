@@ -17,13 +17,13 @@ Baseline captured at: SDK `@turbodocx/sdk@0.4.0`, node `@turbodocx/n8n-nodes-tur
 
 | SDK Module | SDK callable methods | Covered in node (v1.2.0) | Gap |
 |---|---:|---:|---|
-| TurboSign (`sign.ts`) | 9 | 9 | none |
+| TurboSign (`sign.ts`) | 11 | 11 | none |
 | Deliverable (`deliverable.ts`) | 7 | 7 | none |
 | TurboQuote (`quote.ts`) | 68 | 68 | none |
 | TurboPartner (`partner.ts`) | 27 | 27 | none (uses 2nd credential) |
 | TurboWebhooks (`webhooks.ts`) | 10 + `verifyWebhookSignature` | 10 + helper | none |
 
-**Full method parity: 121/121 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
+**Full method parity: 123/123 SDK methods wrapped, plus the `verifyWebhookSignature` helper.
 Zero gaps, zero strays.** The only SDK surface intentionally not wrapped is the set of
 [Deliberate Exclusions](#deliberate-exclusions) — helpers, low-level primitives, and
 convenience overloads that have no idiomatic n8n mapping.
@@ -48,6 +48,8 @@ Credential: `turboDocxApi` (apiKey + orgId). Auth headers: `Authorization: Beare
 | `sendReminder(documentId, recipientIds?)` | POST `/turbosign/documents/{id}/send-reminder` | turboSign / `sendReminder` | ✅ |
 | `getAuditTrail(documentId)` | GET `/turbosign/documents/{id}/audit-trail` | turboSign / `getAuditTrail` | ✅ |
 | `getTemplateSignatureSetup(templateId)` | GET `/turbosign/templates/{templateId}/signature-setup` | turboSign / `getTemplateSignatureSetup` | ✅ |
+| `addTemplateSignatureAnchor(req)` | POST `/turbosign/templates/{templateId}/signature-setup/anchors` | turboSign / `addTemplateSignatureAnchor` | ✅ |
+| `removeTemplateSignatureAnchor(templateId, fieldId)` | DELETE `/turbosign/templates/{templateId}/signature-setup/anchors/{fieldId}` | turboSign / `removeTemplateSignatureAnchor` | ✅ |
 
 Note: `signUrl` is a legacy **field** on the Go and Java `RecipientResponse` models, not a method —
 no node operation required. The API never populates it; signing links are emailed to recipients
@@ -240,4 +242,5 @@ mirror the [cross-SDK parity rule's exclusion list](https://github.com/TurboDocx
 | TurboSign | two-step prep flow (`upload` / `from-deliverable` / `from-template` / `update-with-recipients` / per-doc `prepare-for-*`) | Single-step endpoints already wrapped accept file/fileLink/deliverableId/templateId and cover the API use case |
 | Deliverable | `/deliverable-folder`, `/deliverable-item` (org-content organization), `previewpdflink`, `pdf/{filename}` | Unversioned / UI-only |
 | TurboPartner | `/partner/access`, `/partner/{id}/context` | UI bootstrap/dashboard |
+| TurboSign | `PUT /turbosign/templates/{id}/signature-setup/anchors/by-tag` | Matches the SDK: its revert form needs ids the API does not expose, and its fields form is add plus remove |
 | TurboWebhooks | `GET /api/webhooks` (list) | No `listWebhooks` by design — the node targets the fixed `signature` webhook |

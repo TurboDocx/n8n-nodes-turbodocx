@@ -78,6 +78,8 @@ npm install @turbodocx/n8n-nodes-turbodocx
 | **Send Reminder** | Nudge a document's outstanding signers — a standalone reminder that ignores the automatic cadence and cap | Chase signers outside the normal reminder rhythm |
 | **Get Audit Trail** | Fetch the full signing audit trail for a document | Compliance evidence of who viewed/signed and when |
 | **Get Template Signature Setup** | List a template's signer roles (key, label, signing order, saved signer, field count) | Look up the role keys to send a template with roles |
+| **Add Template Signature Anchor** | Make a tag like `{ClientSign}` a field of one signer role on a template's saved signature setup | Set up a template's signature fields from a workflow |
+| **Remove Template Signature Anchor** | Remove an anchored field from a template's saved signature setup by its field ID | Undo or replace an anchored field |
 
 **Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 
@@ -376,8 +378,21 @@ key shown under **Use via API** on the template page, and leave **Fields** empty
 - Fields is required unless the recipients name roles. Without roles, an empty Fields value is rejected (400 `FieldsRequired`).
 
 Use **Get Template Signature Setup** to list a template's roles: each has a `key` (the value for
-`role`), `label`, `order`, `hasSavedSigner` (with `defaultName` / `defaultEmail` when true) and
-`fieldCount`.
+`role`), `label`, `order`, `hasSavedSigner` (with `defaultName` / `defaultEmail` when true),
+`fieldCount` and `anchoredFieldCount`. The setup also lists its `anchors`: each has a `fieldId`,
+`roleKey`, `type`, `anchor`, `placement`, optional `offset` / `size`, and `notFound` (true when the
+template has no such tag).
+
+### Anchored fields
+
+An anchored field is a signature field tied to a tag such as `{ClientSign}` for one signer role,
+placed wherever that tag appears in the generated document. **Add Template Signature Anchor** takes
+the Template ID, a Role Key (`signer_1` creates the first signer on a template with none), a Field
+Type and the Anchor, plus optional Size, Offset, Placement, Default Value and Read Only. It returns
+the new `fieldId`, the saved `signatureSetup` and `tagBecameSignatureField`. Adding the same type on
+the same tag for the same role again returns that field. **Remove Template Signature Anchor** takes
+the Template ID and the `fieldId` and returns the saved `signatureSetup`. Both need an
+administrator or contributor API key.
 
 ## Conditional (IF/THEN) Fields
 

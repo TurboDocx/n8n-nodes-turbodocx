@@ -404,6 +404,50 @@ export async function executeTurboSign(
 		return [{ json: result }];
 	}
 
+	// Anchored fields on the template's saved signature setup. Both routes answer
+	// `{ data: { results } }`; the node returns `results`.
+	if (operation === 'addTemplateSignatureAnchor') {
+		const templateId = ctx.getNodeParameter('templateId', i) as string;
+		const options = ctx.getNodeParameter('anchorOptions', i, {}) as IDataObject;
+		const body: IDataObject = {
+			roleKey: ctx.getNodeParameter('roleKey', i) as string,
+			type: ctx.getNodeParameter('anchorFieldType', i) as string,
+			anchor: ctx.getNodeParameter('anchor', i) as string,
+		};
+		for (const key of ['size', 'offset'] as const) {
+			if (options[key]) body[key] = parseJsonParameter(ctx, options[key] as string, key, i) as IDataObject;
+		}
+		for (const key of ['placement', 'defaultValue', 'isReadonly'] as const) {
+			if (options[key] !== undefined) body[key] = options[key];
+		}
+		const result = await turboDocxApiRequest(
+			ctx,
+			{
+				method: 'POST',
+				endpoint: `/turbosign/templates/${encodeURIComponent(templateId)}/signature-setup/anchors`,
+				body,
+				unwrap: 'smart',
+			},
+			i,
+		);
+		return [{ json: result.results as IDataObject }];
+	}
+
+	if (operation === 'removeTemplateSignatureAnchor') {
+		const templateId = ctx.getNodeParameter('templateId', i) as string;
+		const fieldId = ctx.getNodeParameter('fieldId', i) as string;
+		const result = await turboDocxApiRequest(
+			ctx,
+			{
+				method: 'DELETE',
+				endpoint: `/turbosign/templates/${encodeURIComponent(templateId)}/signature-setup/anchors/${encodeURIComponent(fieldId)}`,
+				unwrap: 'smart',
+			},
+			i,
+		);
+		return [{ json: result.results as IDataObject }];
+	}
+
 	if (operation === 'getAuditTrail') {
 		const documentId = ctx.getNodeParameter('documentId', i) as string;
 		const result = await turboDocxApiRequest(
