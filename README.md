@@ -357,7 +357,7 @@ backend validates it:
 ## Template Signer Roles
 
 A template whose signers and fields were set up in TurboDocx can be sent without writing any
-fields. Choose **Template** as the File Input Method, give each recipient a `role` with the role
+fields. Choose **Template** (a PDF template) or **Deliverable** as the File Input Method, give each recipient a `role` with the role
 key shown under **Use via API** on the template page, and leave **Fields** empty (the node sends
 `[]`). Each recipient gets the fields saved for their role.
 
