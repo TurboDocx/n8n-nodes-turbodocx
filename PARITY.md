@@ -59,6 +59,15 @@ Note: template **signer roles** (`recipients[].role`, with `fields` optional) ar
 prepare operations. `recipients` and `fields` are JSON passthroughs, so `role` is forwarded as
 written, and an empty Fields parameter is sent as `[]`, which the API treats as no fields (accepted only when a recipient names a role, otherwise `FieldsRequired`).
 
+Note: **Add / Remove Template Signature Anchor** match the SDK's anchored-field methods. A re-add of
+the same type on the same tag for the same role returns that field (same `fieldId`,
+`tagBecameSignatureField` false), updated with any size, offset, placement, defaultValue or
+isReadonly sent. `size` / `offset` are JSON passed through as written, so decimals are kept. A 423
+on these routes is the template lock (body carries no code); like the SDK's `statusCode` 423, the
+node reports `statusCode` 423 with a message to close the template and retry, and no `code`. Get
+Template Signature Setup is a passthrough, so a setup from an older backend with no `anchors` /
+`anchoredFieldCount` is returned as is.
+
 Note: the optional per-document **reminder/expiration schedule overrides** (`remindersEnabled`,
 `reminderDelay`, `reminderInterval`, `maxReminders`, `expirationEnabled`, `expireAfter`,
 `expirationWarning`, `expirationWarningInterval`) are supported on both prepare operations

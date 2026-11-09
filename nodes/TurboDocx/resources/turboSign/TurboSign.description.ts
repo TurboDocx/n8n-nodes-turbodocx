@@ -18,7 +18,7 @@ export const turboSignOperations: INodeProperties[] = [
 				name: 'Add Template Signature Anchor',
 				value: 'addTemplateSignatureAnchor',
 				description:
-					'Make a tag like {ClientSign} a signature field of one signer role on a template\'s saved signature setup',
+					'Make a tag like {ClientSign} a TurboSign field of one signer role on a template\'s saved signature setup. Adding the same type on the same tag for the same role again updates that field.',
 				action: 'Add template signature anchor',
 			},
 			{
@@ -63,7 +63,7 @@ export const turboSignOperations: INodeProperties[] = [
 			{
 				name: 'Remove Template Signature Anchor',
 				value: 'removeTemplateSignatureAnchor',
-				description: 'Remove an anchored field from a template\'s saved signature setup',
+				description: 'Remove a TurboSign field anchored to a tag from a template\'s saved signature setup',
 				action: 'Remove template signature anchor',
 			},
 			{
@@ -182,7 +182,8 @@ export const turboSignFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		description: 'UUID of existing TurboDocx deliverable to use for signature request',
+		description:
+			'UUID of existing TurboDocx deliverable to use for signature request. Recipients can name the template\'s signer roles: a deliverable generated from a PDF template brings each role\'s placed fields, one generated from a Word or PowerPoint template brings each role\'s anchored fields, found by their tags.',
 		required: true,
 	},
 	{
@@ -198,7 +199,7 @@ export const turboSignFields: INodeProperties[] = [
 		},
 		default: '',
 		description:
-			'UUID of TurboDocx template to use (will be converted to PDF). If the template has signer roles set up, give each recipient a "role" and leave Fields empty to use the fields saved on the template.',
+			'UUID of TurboDocx template to use (will be converted to PDF). If a PDF template has signer roles set up, give each recipient a "role" and leave Fields empty to use the fields saved on the template, placed and anchored. Roles on a Word or PowerPoint template are refused (TemplateRolesNeedPdfTemplate): generate a deliverable and use the Deliverable source.',
 		required: true,
 	},
 	{
@@ -248,7 +249,7 @@ export const turboSignFields: INodeProperties[] = [
 			{ name: 'Title', value: 'title' },
 		],
 		default: 'signature',
-		description: 'Type of the anchored field',
+		description: 'Type of the TurboSign field',
 	},
 	{
 		displayName: 'Anchor',
@@ -257,7 +258,8 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
 		default: '',
 		placeholder: '{ClientSign}',
-		description: 'One tag in single braces with no spaces. The field is placed wherever the tag appears.',
+		description:
+			'One tag in single braces with no spaces. The TurboSign field is placed wherever the tag appears.',
 		required: true,
 	},
 	{
@@ -281,7 +283,7 @@ export const turboSignFields: INodeProperties[] = [
 				type: 'json',
 				default: '',
 				placeholder: '{"x":0,"y":0}',
-				description: 'JSON object with x and y, in pixels, to shift the field from its tag',
+				description: 'JSON object with x and y, in pixels (decimals allowed), to shift the field from its tag',
 			},
 			{
 				displayName: 'Placement',
@@ -311,7 +313,7 @@ export const turboSignFields: INodeProperties[] = [
 				type: 'json',
 				default: '',
 				placeholder: '{"width":200,"height":50}',
-				description: 'JSON object with width and height of the field, in pixels',
+				description: 'JSON object with width and height of the field, in pixels (decimals allowed)',
 			},
 		],
 	},

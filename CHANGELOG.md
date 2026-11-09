@@ -12,13 +12,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Template signer roles.** Recipients can name a template's signer `role`, and the fields saved
   for that role are used. New operation **Get Template Signature Setup** lists a template's roles.
 - **Template signature anchors.** New operations **Add Template Signature Anchor** and **Remove
-  Template Signature Anchor** add and remove anchored fields (a field tied to a tag like
-  `{ClientSign}` for one role) on a template's saved signature setup. Get Template Signature Setup
-  also returns `anchors` and each role's `anchoredFieldCount`.
+  Template Signature Anchor** add and remove anchored TurboSign fields (a field tied to a tag like
+  `{ClientSign}` for one role) on a template's saved signature setup. Adding the same type on the
+  same tag for the same role again updates that field (same `fieldId`, `tagBecameSignatureField`
+  false). Get Template Signature Setup also returns `anchors` and each role's `anchoredFieldCount`
+  (absent from older backends).
+- A role send with a Deliverable source brings the role's saved fields too: placed fields for a
+  deliverable from a PDF template, anchored fields for one from a Word or PowerPoint template.
 
 ### Changed
 
 - The **Fields** parameter is now documented as required unless the recipients name roles.
+
+### Fixed
+
+- A 423 (a template locked because it is open for editing in TurboDocx) now reads as a clear
+  message saying to close it and try again, and no longer reports the phrase "Resource is locked"
+  as an error code.
 
 ## [1.4.1]
 
