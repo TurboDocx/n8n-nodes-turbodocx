@@ -62,7 +62,7 @@ default applies.
 Note: the optional **`applySignatureSetup`** boolean is supported on both prepare operations via
 **Additional Fields > Apply Signature Setup**, matching the SDK. It is sent when set (an explicit
 `false` too) and only for a Template or Deliverable source, the sources that have a saved signature
-setup. The SDK's `addTemplateSignatureAnchor` / `removeTemplateSignatureAnchor` (POST/DELETE
+setup. It applies with or without `recipients[].role`. The SDK's `addTemplateSignatureAnchor` / `removeTemplateSignatureAnchor` (POST/DELETE
 `/turbosign/templates/{id}/signature-setup/anchors[/{fieldId}]`) are not mirrored yet: the node has
 no template signature setup operation to hang them on. See
 [TurboDocx/SDK#143](https://github.com/TurboDocx/SDK/pull/143).

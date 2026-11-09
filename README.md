@@ -262,7 +262,14 @@ TurboSign supports **two methods** for placing signature fields on documents:
 | `above` | Place field above anchor |
 | `below` | Place field below anchor |
 
-**Apply Signature Setup:** when the source is a Template or Deliverable whose template has anchored fields saved in its signature setup, turn on **Additional Fields > Apply Signature Setup**. A field you send with a `template.anchor` and type that match a saved anchored field is treated as that field: it fits its tag, and a tag missing from the document is skipped instead of failing the request. It has no effect on uploaded files or file URLs.
+**Apply Signature Setup:** when the source is a Template or Deliverable whose template has TurboSign fields anchored to tags in its saved signature setup, turn on **Additional Fields > Apply Signature Setup**. Each field you send with a `template.anchor` whose tag (case-insensitive) and type match a saved anchored field is marked as that field:
+
+- a tag missing from the document is skipped instead of failing the request; the send, or the review link, then fails with 400 `SignerHasNoFields` if that leaves a signer with no field or only read-only ones;
+- with no `template.size` of its own it is sized to the tag (as wide as the tag, at least the type's default width, at the default height); a size of your own wins;
+- it is centred on the tag, with or without a size of its own, unless you set `template.alignment` (`left`, `center` or `right`);
+- the saved field's size, offset, placement, default value and read-only setting are not copied onto your field.
+
+It applies with or without signer roles, and has no effect on uploaded files or file URLs. Without it, your anchor fields keep the standard placement and a missing tag fails the request.
 
 **Example:**
 ```json

@@ -235,7 +235,7 @@ export const turboSignFields: INodeProperties[] = [
 				type: 'boolean',
 				default: false,
 				description:
-					'Whether to use the template\'s saved signature setup: a field whose template anchor and type match an anchored field of the setup fits its tag, and a tag missing from the document is skipped instead of failing the request. Only has an effect with a Template or Deliverable source (the deliverable\'s template), and on recipients that name no role.',
+					'Whether to match your anchor fields to the TurboSign fields saved on the template. A field whose template.anchor tag (case-insensitive) and type match a saved anchored field is marked as that field: a tag missing from the document is skipped instead of failing (the request still fails with 400 SignerHasNoFields if a signer is left with no field, or only read-only ones); with no template.size of its own it is sized to the tag; it is centred on the tag unless you set template.alignment. The saved field\'s size, offset, placement, default value and read-only setting are not copied. Applies with or without signer roles. Only has an effect with a Template or Deliverable source (the deliverable\'s template).',
 			},
 			{
 				displayName: 'CC Emails',
