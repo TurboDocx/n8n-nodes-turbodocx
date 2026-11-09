@@ -15,6 +15,13 @@ export const turboSignOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Add Template Signature Anchor',
+				value: 'addTemplateSignatureAnchor',
+				description:
+					'Make a tag like {ClientSign} a TurboSign field of one signer role on a template\'s saved signature setup. Adding the same type on the same tag for the same role again updates that field.',
+				action: 'Add template signature anchor',
+			},
+			{
 				name: 'Download Document',
 				value: 'downloadDocument',
 				description: 'Download the signed PDF document',
@@ -52,6 +59,12 @@ export const turboSignOperations: INodeProperties[] = [
 				description:
 					'List a template\'s signer roles, to send it with a role on each recipient',
 				action: 'Get template signature setup',
+			},
+			{
+				name: 'Remove Template Signature Anchor',
+				value: 'removeTemplateSignatureAnchor',
+				description: 'Remove a TurboSign field anchored to a tag from a template\'s saved signature setup',
+				action: 'Remove template signature anchor',
 			},
 			{
 				name: 'Resend Email',
@@ -169,7 +182,8 @@ export const turboSignFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		description: 'UUID of existing TurboDocx deliverable to use for signature request',
+		description:
+			'UUID of existing TurboDocx deliverable to use for signature request. Recipients can name the template\'s signer roles: a deliverable generated from a PDF template brings each role\'s placed fields, one generated from a Word or PowerPoint template brings each role\'s anchored fields, found by their tags.',
 		required: true,
 	},
 	{
@@ -185,7 +199,7 @@ export const turboSignFields: INodeProperties[] = [
 		},
 		default: '',
 		description:
-			'UUID of TurboDocx template to use (will be converted to PDF). If the template has signer roles set up, give each recipient a "role" and leave Fields empty to use the fields saved on the template.',
+			'UUID of TurboDocx template to use (will be converted to PDF). If a PDF template has signer roles set up, give each recipient a "role" and leave Fields empty to use the fields saved on the template, placed and anchored. Roles on a Word or PowerPoint template are refused (TemplateRolesNeedPdfTemplate): generate a deliverable and use the Deliverable source.',
 		required: true,
 	},
 	{
@@ -195,11 +209,122 @@ export const turboSignFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: RESOURCE,
-				operation: ['getTemplateSignatureSetup'],
+				operation: [
+					'getTemplateSignatureSetup',
+					'addTemplateSignatureAnchor',
+					'removeTemplateSignatureAnchor',
+				],
 			},
 		},
 		default: '',
-		description: 'UUID of the TurboDocx template whose signer roles to list',
+		description: 'UUID of the TurboDocx template whose signature setup to read or change',
+		required: true,
+	},
+	{
+		displayName: 'Role Key',
+		name: 'roleKey',
+		type: 'string',
+		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
+		default: '',
+		description:
+			'Key of the signer role that fills the field, as listed by Get Template Signature Setup. On a template with no signer yet, signer_1 creates the first signer.',
+		required: true,
+	},
+	{
+		displayName: 'Field Type',
+		name: 'anchorFieldType',
+		type: 'options',
+		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
+		options: [
+			{ name: 'Checkbox', value: 'checkbox' },
+			{ name: 'Company', value: 'company' },
+			{ name: 'Date', value: 'date' },
+			{ name: 'Email', value: 'email' },
+			{ name: 'First Name', value: 'first_name' },
+			{ name: 'Full Name', value: 'full_name' },
+			{ name: 'Initial', value: 'initial' },
+			{ name: 'Last Name', value: 'last_name' },
+			{ name: 'Signature', value: 'signature' },
+			{ name: 'Text', value: 'text' },
+			{ name: 'Title', value: 'title' },
+		],
+		default: 'signature',
+		description: 'Type of the TurboSign field',
+	},
+	{
+		displayName: 'Anchor',
+		name: 'anchor',
+		type: 'string',
+		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
+		default: '',
+		placeholder: '{ClientSign}',
+		description:
+			'One tag in single braces with no spaces. The TurboSign field is placed wherever the tag appears.',
+		required: true,
+	},
+	{
+		displayName: 'Anchor Options',
+		name: 'anchorOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: { show: { resource: RESOURCE, operation: ['addTemplateSignatureAnchor'] } },
+		options: [
+			{
+				displayName: 'Default Value',
+				name: 'defaultValue',
+				type: 'string',
+				default: '',
+				description: 'Value the field is pre-filled with',
+			},
+			{
+				displayName: 'Offset',
+				name: 'offset',
+				type: 'json',
+				default: '',
+				placeholder: '{"x":0,"y":0}',
+				description: 'JSON object with x and y, in pixels (decimals allowed), to shift the field from its tag',
+			},
+			{
+				displayName: 'Placement',
+				name: 'placement',
+				type: 'options',
+				options: [
+					{ name: 'Above', value: 'above' },
+					{ name: 'After', value: 'after' },
+					{ name: 'Before', value: 'before' },
+					{ name: 'Below', value: 'below' },
+					{ name: 'Replace', value: 'replace' },
+				],
+				default: 'replace',
+				description: 'Where the field sits relative to its tag',
+			},
+			{
+				displayName: 'Read Only',
+				name: 'isReadonly',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether the signer cannot change the field. A read-only field needs a default value, its own or its role\'s.',
+			},
+			{
+				displayName: 'Size',
+				name: 'size',
+				type: 'json',
+				default: '',
+				placeholder: '{"width":200,"height":50}',
+				description: 'JSON object with width and height of the field, in pixels (decimals allowed)',
+			},
+		],
+	},
+	{
+		displayName: 'Field ID',
+		name: 'fieldId',
+		type: 'string',
+		displayOptions: { show: { resource: RESOURCE, operation: ['removeTemplateSignatureAnchor'] } },
+		default: '',
+		description:
+			'ID of the anchored field, as returned by Add Template Signature Anchor or listed under anchors by Get Template Signature Setup',
 		required: true,
 	},
 	{
@@ -214,7 +339,7 @@ export const turboSignFields: INodeProperties[] = [
 		},
 		default: '',
 		description:
-			'JSON array of recipients with name, email, signingOrder, and metadata (color, lightColor). When sending a template set up with signer roles, add "role" to a recipient with the role key shown under "Use via API" on the template page (or from Get Template Signature Setup). That recipient gets the fields saved for the role and needs no signingOrder; a role you leave out uses the signer saved on the template.',
+			'JSON array of recipients with name, email, signingOrder, and metadata (color, lightColor). When sending a template set up with signer roles (Template or Deliverable source), add "role" to a recipient with the role key shown under "Use via API" on the template page (or from Get Template Signature Setup). That recipient gets the fields saved for the role and needs no signingOrder; a role you leave out uses the signer saved on the template.',
 		required: true,
 		placeholder:
 			'[{"name":"Sales Rep","email":"sales@example.com","signingOrder":1},{"name":"Client Name","email":"client@example.com","signingOrder":2}]',
@@ -235,7 +360,7 @@ export const turboSignFields: INodeProperties[] = [
 			'JSON array of signature fields with recipientEmail, type, and template anchor. Required unless the recipients name template signer roles (recipients[].role), in which case the fields saved for each role are used and any fields given here are added to them. Without roles, an empty list is rejected (400 FieldsRequired). Optional per-field "defaultValue" pre-fills the field (max 600 characters); for a "date" field set it to a fixed date in MM/DD/YYYY (e.g. "12/31/2026") or omit it to auto-fill the signing date ("signature"/"initial" fields cannot carry one, and a "date" field cannot be readonly). Optional per-field "metadata" enables conditional (IF/THEN) logic: put "metadata":{"fieldKey":"agree_terms"} on a controlling checkbox, and on a dependent field add "metadata":{"conditional":{"controllingFieldKey":"agree_terms","operator":"is_checked" or "is_not_checked","action":"show" or "unlock"}} (show = hidden until met; unlock = visible-but-read-only until met). Optional per-field "required" (boolean, default true): set "required":false to let the signer leave the field blank. "signature" and "initial" fields are always required, and each recipient needs at least one required editable field.',
 		placeholder:
 			'[{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{Signature1}","placement":"replace","size":{"width":200,"height":50}}}]',
-		hint: 'Example: [{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{SalesSigner}","placement":"replace","size":{"width":200,"height":50}}},{"recipientEmail":"client@example.com","type":"signature","template":{"anchor":"{ClientSigner}","placement":"replace","size":{"width":200,"height":50}}}]. Conditional example: a checkbox {"recipientEmail":"client@example.com","type":"checkbox","template":{"anchor":"{AgreeTerms}","placement":"replace","size":{"width":20,"height":20}},"metadata":{"fieldKey":"agree_terms"}} controls a text field {"recipientEmail":"client@example.com","type":"text","template":{"anchor":"{Reason}","placement":"replace","size":{"width":200,"height":30}},"metadata":{"conditional":{"controllingFieldKey":"agree_terms","operator":"is_checked","action":"show"}}}. Date default example: {"recipientEmail":"client@example.com","type":"date","template":{"anchor":"{EffectiveDate}","placement":"replace","size":{"width":120,"height":20}},"defaultValue":"12/31/2026"}. Optional field example: {"recipientEmail":"client@example.com","type":"text","required":false,"template":{"anchor":"{Notes}","placement":"replace","size":{"width":240,"height":30}}}. Leave empty when sending a template with signer roles.',
+		hint: 'Example: [{"recipientEmail":"sales@example.com","type":"signature","template":{"anchor":"{SalesSigner}","placement":"replace","size":{"width":200,"height":50}}},{"recipientEmail":"client@example.com","type":"signature","template":{"anchor":"{ClientSigner}","placement":"replace","size":{"width":200,"height":50}}}]. Conditional example: a checkbox {"recipientEmail":"client@example.com","type":"checkbox","template":{"anchor":"{AgreeTerms}","placement":"replace","size":{"width":20,"height":20}},"metadata":{"fieldKey":"agree_terms"}} controls a text field {"recipientEmail":"client@example.com","type":"text","template":{"anchor":"{Reason}","placement":"replace","size":{"width":200,"height":30}},"metadata":{"conditional":{"controllingFieldKey":"agree_terms","operator":"is_checked","action":"show"}}}. Date default example: {"recipientEmail":"client@example.com","type":"date","template":{"anchor":"{EffectiveDate}","placement":"replace","size":{"width":120,"height":20}},"defaultValue":"12/31/2026"}. Optional field example: {"recipientEmail":"client@example.com","type":"text","required":false,"template":{"anchor":"{Notes}","placement":"replace","size":{"width":240,"height":30}}}. Leave empty when sending a template or deliverable with signer roles.',
 	},
 	{
 		displayName: 'Additional Fields',

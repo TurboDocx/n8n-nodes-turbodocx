@@ -137,6 +137,20 @@ export function buildApiError(
 			? (obj.error as Record<string, unknown>)
 			: null;
 
+	// A 423 is the lock on a resource open for editing in TurboDocx (e.g. a template, on the
+	// signature setup anchor routes). Its body is `{ error: "Resource is locked", message, data }`
+	// with no machine code, so the `error` phrase must not be passed off as one; say what to do.
+	if (statusCode === 423) {
+		const reason =
+			(obj && typeof obj.message === 'string' && obj.message.replace(/\.$/, '')) ||
+			'This resource is locked';
+		return {
+			message: `${reason}. It is locked while it is open for editing in TurboDocx: close it there, then try again.`,
+			code: '',
+			statusCode,
+		};
+	}
+
 	let errorMessage = 'Request failed';
 	const errorCode = obj
 		? ((obj.type as string) ||

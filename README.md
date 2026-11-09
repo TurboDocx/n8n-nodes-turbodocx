@@ -78,6 +78,8 @@ npm install @turbodocx/n8n-nodes-turbodocx
 | **Send Reminder** | Nudge a document's outstanding signers — a standalone reminder that ignores the automatic cadence and cap | Chase signers outside the normal reminder rhythm |
 | **Get Audit Trail** | Fetch the full signing audit trail for a document | Compliance evidence of who viewed/signed and when |
 | **Get Template Signature Setup** | List a template's signer roles (key, label, signing order, saved signer, field count) | Look up the role keys to send a template with roles |
+| **Add Template Signature Anchor** | Make a tag like `{ClientSign}` a TurboSign field of one signer role on a template's saved signature setup | Set up a template's signature fields from a workflow |
+| **Remove Template Signature Anchor** | Remove a TurboSign field anchored to a tag from a template's saved signature setup by its field ID | Undo or replace an anchored field |
 
 **Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 
@@ -355,7 +357,7 @@ backend validates it:
 ## Template Signer Roles
 
 A template whose signers and fields were set up in TurboDocx can be sent without writing any
-fields. Choose **Template** as the File Input Method, give each recipient a `role` with the role
+fields. Choose **Template** (a PDF template) or **Deliverable** as the File Input Method, give each recipient a `role` with the role
 key shown under **Use via API** on the template page, and leave **Fields** empty (the node sends
 `[]`). Each recipient gets the fields saved for their role.
 
@@ -372,12 +374,42 @@ key shown under **Use via API** on the template page, and leave **Fields** empty
   400 naming the unfilled role.
 - An unknown role key is a 400 that lists the template's valid roles.
 - Fields you do pass are added to the saved ones.
-- `role` only works with a template (`templateId`), and only with a PDF signature template.
+- Which saved fields a role brings depends on the source:
+  - **Template** (`templateId`) of a PDF template: all of the role's saved fields, placed and anchored.
+  - **Deliverable** (`deliverableId`) generated from a PDF template: the placed fields only; anchored fields are not used.
+  - **Deliverable** generated from a Word or PowerPoint template: the anchored fields only, found by their tags in the deliverable; placed fields are not used.
+  - **Template** of a Word or PowerPoint template is refused (400 `TemplateRolesNeedPdfTemplate`).
+- `role` with an uploaded file or a file URL (no `templateId` or `deliverableId`) is rejected (400 `RoleRequiresTemplate`).
 - Fields is required unless the recipients name roles. Without roles, an empty Fields value is rejected (400 `FieldsRequired`).
 
 Use **Get Template Signature Setup** to list a template's roles: each has a `key` (the value for
-`role`), `label`, `order`, `hasSavedSigner` (with `defaultName` / `defaultEmail` when true) and
-`fieldCount`.
+`role`), `label`, `order`, `hasSavedSigner` (with `defaultName` / `defaultEmail` when true),
+`fieldCount` and `anchoredFieldCount`. The setup also lists its `anchors`: each has a `fieldId`,
+`roleKey`, `type`, `anchor`, `placement`, optional `offset` / `size`, and `notFound` (true when the
+template has no such tag). An older TurboDocx backend leaves out `anchors` and
+`anchoredFieldCount`; treat them as an empty list and 0.
+
+### Anchored fields
+
+An anchored field is a TurboSign field tied to a tag such as `{ClientSign}` for one signer role,
+placed wherever that tag appears in the generated document. **Add Template Signature Anchor** takes
+the Template ID, a Role Key (`signer_1` creates the first signer on a template with none), a Field
+Type and the Anchor, plus optional Size, Offset (both in pixels, decimals allowed), Placement,
+Default Value and Read Only. It returns the field's `fieldId`, the saved `signatureSetup` and
+`tagBecameSignatureField`.
+
+- Adding the same type on the same tag for the same role again returns that field (same `fieldId`,
+  `tagBecameSignatureField` false), updated with any Size, Offset, Placement, Default Value or Read
+  Only you send; a setting you leave out keeps its saved value. `tagBecameSignatureField` is true
+  only when the call created the field.
+- A tag belongs to one role and holds one field: another role's tag, or a second field on a tag, is
+  a 409 (`AnchorOwnedByOtherRole` or `AnchorTagHasField`).
+- A template open for editing in TurboDocx is locked: both operations then fail with HTTP 423 and
+  the message says to close the template there and try again. The API sends no error code for it,
+  so with Continue On Fail branch on `statusCode` 423.
+
+**Remove Template Signature Anchor** takes the Template ID and the `fieldId` and returns the saved
+`signatureSetup`. Both need an administrator or contributor API key.
 
 ## Conditional (IF/THEN) Fields
 
