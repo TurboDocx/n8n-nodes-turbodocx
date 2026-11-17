@@ -80,6 +80,8 @@ npm install @turbodocx/n8n-nodes-turbodocx
 
 **Reminder & Expiration Schedule**: **Prepare for Signing** and **Prepare for Review** both accept an optional Reminder & Expiration Schedule — the automatic reminder cadence (delay, interval, and cap) and document expiration (expire-after plus warning cadence), set per document at send time. Leave any field out to inherit your organization's defaults. Matches the schedule options in the TurboDocx SDK.
 
+**Fit Fields to Tags**: **Prepare for Signing** and **Prepare for Review** have an optional **Fit Fields to Tags** setting under Additional Fields. When on, each field whose template anchor is one tag in single braces with no spaces (such as `{ClientSign}`), with `replace` placement or none and without `useRegex`, is placed the way a template's saved setup field is placed: with no size it is fitted to its tag's line, and with a size it is centred on its tag. A tag missing from the document still fails the request. It works with every file source and is off by default; when off, the request is unchanged. Matches the `fitAnchoredTags` option in the TurboDocx SDK.
+
 **Supported File Types**: PDF, DOCX, PPTX, or URLs to hosted files (S3, Google Drive, etc.)
 
 ### Deliverable (Document Generation)

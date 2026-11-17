@@ -59,6 +59,11 @@ Note: the optional per-document **reminder/expiration schedule overrides** (`rem
 matching the SDK's schedule options. Each is optional and omitted when unset so the organization
 default applies.
 
+Note: the SDK's optional `fitAnchoredTags` on `sendSignature` and `createSignatureReviewLink` is the
+**Fit Fields to Tags** option under Additional Fields on both prepare operations, for every file
+source. Like the SDK it is sent only when on (as the string `'true'`); off or not added, the request
+is unchanged.
+
 ---
 
 ## Deliverable — `src/modules/deliverable.ts`
