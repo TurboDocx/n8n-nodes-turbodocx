@@ -64,6 +64,7 @@ interface ITurboSignAdditionalFields {
 	senderName?: string;
 	senderEmail?: string;
 	ccEmails?: string;
+	fitAnchoredTags?: boolean;
 }
 
 /**
@@ -98,6 +99,8 @@ interface ITurboSignRequestBody extends IDataObject {
 	senderName?: string;
 	senderEmail?: string;
 	ccEmails?: string;
+	// 'true' only: the API treats false like a missing key, so the part is left out otherwise
+	fitAnchoredTags?: string;
 	// Schedule overrides. On the multipart send path the legacy formData helper only accepts
 	// string/Buffer parts, so these are all serialised to strings: booleans and maxReminders as
 	// their scalar string form, and each Duration as a JSON string of `{ value, unit }` that the
@@ -172,6 +175,9 @@ async function buildPrepareBody(
 	if (additionalFields.senderEmail) requestBody.senderEmail = additionalFields.senderEmail;
 	if (additionalFields.ccEmails && additionalFields.ccEmails !== '')
 		requestBody.ccEmails = additionalFields.ccEmails;
+	// Sent only when on, as the string 'true' (the multipart helper takes string parts only). The
+	// API treats false like a missing key, so off or not added leaves the request as it was.
+	if (additionalFields.fitAnchoredTags === true) requestBody.fitAnchoredTags = 'true';
 
 	// Reminder/expiration schedule overrides. The field is scoped to both prepare operations
 	// (`prepareForReview` and `prepareForSigning`) — the backend accepts scheduleOverrides on

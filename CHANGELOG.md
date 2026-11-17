@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Fit Fields to Tags** on Send Signature and Get Review Link (Additional Fields). When on, each
+  field on a single-brace tag such as `{ClientSign}` is placed the way a template's saved setup
+  field is placed: fitted to its tag's line when it has no size, centred on its tag when it has
+  one. Sent only when on, for every file source, so existing workflows send the same request.
+  Matches the SDK's `fitAnchoredTags`.
+
 ## [1.4.1]
 
 ### Fixed

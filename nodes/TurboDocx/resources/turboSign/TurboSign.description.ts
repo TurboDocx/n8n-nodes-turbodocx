@@ -252,6 +252,14 @@ export const turboSignFields: INodeProperties[] = [
 				description: 'Name for the signature document',
 			},
 			{
+				displayName: 'Fit Fields to Tags',
+				name: 'fitAnchoredTags',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to place each field whose template anchor is one tag in single braces with no spaces (such as {ClientSign}), with "replace" placement or none and without useRegex, the way a template\'s saved setup field is placed. With no size the field is fitted to its tag\'s line; with a size it is centred on its tag. A tag missing from the document still fails the request. Off, fields keep the standard placement.',
+			},
+			{
 				displayName: 'Sender Email',
 				name: 'senderEmail',
 				type: 'string',
