@@ -4,6 +4,7 @@ import {
 	parseJsonParameter,
 	paginatedList,
 } from '../../shared/GenericFunctions';
+import { applySort, splitCsv } from '../../shared/turboQuoteOptions';
 
 /**
  * Paginate a TurboQuote-style list endpoint (`{ data: { results, totalRecords } }`).
@@ -80,6 +81,8 @@ async function executeCompany(
 		const additionalFields = ctx.getNodeParameter('additionalFields', i, {}) as IDataObject;
 
 		const body: IDataObject = { name, contacts: contacts as IDataObject[] };
+		if (additionalFields.email !== undefined && additionalFields.email !== '')
+			body.email = additionalFields.email;
 		if (additionalFields.phone !== undefined && additionalFields.phone !== '')
 			body.phone = additionalFields.phone;
 		if (additionalFields.city !== undefined && additionalFields.city !== '')
@@ -119,6 +122,7 @@ async function executeCompany(
 				.map((s) => s.trim())
 				.filter((s) => s !== '');
 		}
+		applySort(ctx, i, baseQs);
 		return paginateList(ctx, i, '/v1/companies', baseQs);
 	}
 
@@ -127,7 +131,21 @@ async function executeCompany(
 		const filters = ctx.getNodeParameter('contactFilters', i, {}) as IDataObject;
 		const baseQs: IDataObject = {};
 		if (filters.query) baseQs.query = filters.query;
+		applySort(ctx, i, baseQs);
 		return paginateList(ctx, i, `/v1/companies/${companyId}/contacts`, baseQs);
+	}
+
+	if (operation === 'listOpenQuotes') {
+		// The open quotes (draft or sent) that block deleting the company:
+		// { results (newest 50), totalRecords }, kept as one item so a workflow can check
+		// totalRecords before a delete.
+		const companyId = ctx.getNodeParameter('companyId', i) as string;
+		const result = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint: `/v1/companies/${companyId}/open-quotes`, unwrap: 'smart' },
+			i,
+		);
+		return [{ json: result }];
 	}
 
 	if (operation === 'update') {
@@ -135,6 +153,7 @@ async function executeCompany(
 		const updateFields = ctx.getNodeParameter('updateFields', i, {}) as IDataObject;
 		const body: IDataObject = {};
 		applyScalar(body, updateFields, 'name');
+		applyNullableScalar(body, updateFields, 'email');
 		applyNullableScalar(body, updateFields, 'phone');
 		applyNullableScalar(body, updateFields, 'city');
 		applyNullableScalar(body, updateFields, 'state');
@@ -198,7 +217,20 @@ async function executeContact(
 		if (filters.query) baseQs.query = filters.query;
 		if (filters.companyId !== undefined && filters.companyId !== '')
 			baseQs.companyId = filters.companyId;
+		if (filters.companyIds) baseQs.companyIds = splitCsv(filters.companyIds as string);
+		applySort(ctx, i, baseQs);
 		return paginateList(ctx, i, '/v1/contacts', baseQs);
+	}
+
+	if (operation === 'listOpenQuotes') {
+		// The open quotes made out to the contact: what blocks deleting them (one item).
+		const contactId = ctx.getNodeParameter('contactId', i) as string;
+		const result = await turboDocxApiRequest(
+			ctx,
+			{ method: 'GET', endpoint: `/v1/contacts/${contactId}/open-quotes`, unwrap: 'smart' },
+			i,
+		);
+		return [{ json: result }];
 	}
 
 	if (operation === 'update') {
@@ -350,6 +382,7 @@ async function executeQuoteType(
 		if (filters.categoryType !== undefined && filters.categoryType !== '')
 			baseQs.categoryType = filters.categoryType;
 		if (filters.includeUsage !== undefined) baseQs.includeUsage = filters.includeUsage;
+		applySort(ctx, i, baseQs);
 		return paginateList(ctx, i, '/v1/types', baseQs);
 	}
 

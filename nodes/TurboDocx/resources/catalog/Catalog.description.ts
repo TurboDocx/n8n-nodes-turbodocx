@@ -1,4 +1,5 @@
 import { INodeProperties } from 'n8n-workflow';
+import { duplicateFieldsCollection, sortCollection } from '../../shared/turboQuoteOptions';
 
 const PRODUCT = ['product'];
 const PRICEBOOK = ['priceBook'];
@@ -77,6 +78,12 @@ export const productOperations: INodeProperties[] = [
 				value: 'primaryImages',
 				description: 'Get the primary image for a set of products',
 				action: 'Get primary images of products',
+			},
+			{
+				name: 'Get Quote Images',
+				value: 'quoteImages',
+				description: 'Get the images each product shows on a quote (up to three, in order)',
+				action: 'Get quote images of products',
 			},
 			{
 				name: 'Update',
@@ -397,11 +404,11 @@ export const productFields: INodeProperties[] = [
 		type: 'json',
 		required: true,
 		default: '[]',
-		description: 'JSON array of product UUIDs to fetch primary images for',
+		description: 'JSON array of product UUIDs to fetch images for (1–100)',
 		placeholder: '["prod-uuid-1","prod-uuid-2"]',
-		hint: 'Returns a map of product ID to its primary image (or null when none).',
+		hint: 'Get Primary Images returns a map of product ID to its first image (or null); Get Quote Images a map of product ID to up to three images.',
 		displayOptions: {
-			show: { resource: PRODUCT, operation: ['primaryImages'] },
+			show: { resource: PRODUCT, operation: ['primaryImages', 'quoteImages'] },
 		},
 	},
 
@@ -440,6 +447,14 @@ export const productFields: INodeProperties[] = [
 		},
 		options: [
 			{
+				displayName: 'Billing Frequencies',
+				name: 'billingFrequencies',
+				type: 'multiOptions',
+				default: [],
+				options: BILLING_FREQUENCY_OPTIONS,
+				description: 'Products with any of these billing frequencies',
+			},
+			{
 				displayName: 'Billing Frequency',
 				name: 'billingFrequency',
 				type: 'options',
@@ -452,6 +467,14 @@ export const productFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'Comma-separated list of category UUIDs to filter by',
+			},
+			{
+				displayName: 'Currencies',
+				name: 'currencies',
+				type: 'multiOptions',
+				default: [],
+				options: CURRENCY_OPTIONS,
+				description: 'Products in any of these currencies',
 			},
 			{
 				displayName: 'Currency',
@@ -476,6 +499,17 @@ export const productFields: INodeProperties[] = [
 			},
 		],
 	},
+	sortCollection(
+		PRODUCT,
+		['list'],
+		[
+			{ name: 'Created', value: 'createdOn' },
+			{ name: 'List Price', value: 'listPrice' },
+			{ name: 'Name', value: 'name' },
+		],
+		'newest first',
+	),
+	duplicateFieldsCollection(PRODUCT),
 ];
 
 // =====================================================================================
@@ -509,7 +543,7 @@ export const priceBookOperations: INodeProperties[] = [
 			{
 				name: 'Delete',
 				value: 'delete',
-				description: 'Delete a price book',
+				description: "Delete a price book. The organization's default price book can't be deleted.",
 				action: 'Delete a price book',
 			},
 			{
@@ -742,6 +776,14 @@ export const priceBookFields: INodeProperties[] = [
 				placeholder: '[{"productId":"prod-uuid","discountPercent":10}]',
 			},
 			{
+				displayName: 'Reset Product Pricing',
+				name: 'resetProductPricing',
+				type: 'boolean',
+				default: false,
+				description:
+					"Whether to put every product back on the book's own discount (applied before any Product Pricing in the same update)",
+			},
+			{
 				displayName: 'Show in Quote Builder',
 				name: 'showInQuoteBuilder',
 				type: 'boolean',
@@ -848,6 +890,20 @@ export const priceBookFields: INodeProperties[] = [
 			},
 		],
 	},
+	sortCollection(
+		PRICEBOOK,
+		['list'],
+		[
+			{ name: 'Created', value: 'createdOn' },
+			{ name: 'Discount', value: 'discountPercent' },
+			{ name: 'Name', value: 'name' },
+			{ name: 'Own Prices', value: 'overrideCount' },
+			{ name: 'Valid From', value: 'validFrom' },
+			{ name: 'Valid To', value: 'validTo' },
+		],
+		'newest first',
+	),
+	duplicateFieldsCollection(PRICEBOOK),
 ];
 
 // =====================================================================================
@@ -1218,6 +1274,14 @@ export const bundleFields: INodeProperties[] = [
 				description: 'Comma-separated list of category UUIDs to filter by',
 			},
 			{
+				displayName: 'Currencies',
+				name: 'currencies',
+				type: 'multiOptions',
+				default: [],
+				options: CURRENCY_OPTIONS,
+				description: 'Bundles in any of these currencies',
+			},
+			{
 				displayName: 'Currency',
 				name: 'currency',
 				type: 'options',
@@ -1229,7 +1293,7 @@ export const bundleFields: INodeProperties[] = [
 				name: 'query',
 				type: 'string',
 				default: '',
-				description: 'Filter bundles by name or SKU',
+				description: 'Filter bundles by name, SKU or description',
 			},
 			{
 				displayName: 'Show in Catalog',
@@ -1240,4 +1304,17 @@ export const bundleFields: INodeProperties[] = [
 			},
 		],
 	},
+	sortCollection(
+		BUNDLE,
+		['list'],
+		[
+			{ name: 'Created', value: 'createdOn' },
+			{ name: 'Final Price', value: 'totalFinalPrice' },
+			{ name: 'Items', value: 'itemCount' },
+			{ name: 'List Price', value: 'totalListPrice' },
+			{ name: 'Name', value: 'name' },
+		],
+		'newest first',
+	),
+	duplicateFieldsCollection(BUNDLE),
 ];

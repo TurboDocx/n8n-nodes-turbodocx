@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **TurboQuote list sorting.** Every TurboQuote Get Many (quotes, products, price books, bundles,
+  companies, a company's contacts, contacts, quote types) has a **Sort** option. Left out, each list
+  keeps its usual order.
+- **Quote → Get Many filters**: several companies and currencies, the **Expired** status, Created By
+  and Created by API Keys, and a Valid Until window or From / To dates. Products filter by several
+  billing frequencies and currencies, bundles by several currencies, contacts by several companies.
+- **Quote → Get Summary** (the quote list's summary cards for a set of filters) and **Quote → Get
+  Creators** (the people and API keys who created quotes, for the Created By filter).
+- **Quote Number Config → Get Next Number**: the number the next quote will get (read only).
+- **Custom line item images**: Quote Line Item → Add Images, Get Images, Reorder Images, Remove
+  Image and Get Quote Images. Product → **Get Quote Images** (up to three per product).
+- **Company / Contact → Get Open Quotes**: the open quotes that block a delete.
+- An optional **Name** for the copy on every Duplicate; **Email** on Company create and update;
+  **Reset Product Pricing** on Price Book update.
+
+### Changed
+
+- Products take at most **3** images (was 5), matching the API.
+- The API now refuses to delete a **sent** quote (void it instead), a company or contact on open
+  quotes, a company's last contact and the default price book. The node error shows the reason
+  and code; the Delete descriptions say so.
+
 ## [1.4.1]
 
 ### Fixed
