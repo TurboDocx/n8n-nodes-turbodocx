@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **TurboSign: Apply Signature Setup.** Send Signature and Get Review Link take an optional
+  **Apply Signature Setup** option under Additional Fields. With a Template or Deliverable source,
+  a field whose `template.anchor` tag (case-insensitive) and type match a TurboSign field anchored
+  in the template's saved signature setup is marked as that field: a missing tag is skipped (400
+  `SignerHasNoFields` if a signer is then left with no field or only read-only ones), it is sized
+  to the tag when it has no size of its own, and centred on the tag unless `template.alignment` is
+  set. The saved field's settings are not copied. Applies with or without signer roles. Existing
+  workflows are unchanged.
+
 ## [1.4.1]
 
 ### Fixed
