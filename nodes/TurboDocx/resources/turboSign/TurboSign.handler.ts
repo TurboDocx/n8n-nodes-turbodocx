@@ -176,8 +176,9 @@ async function buildPrepareBody(
 	if (additionalFields.ccEmails && additionalFields.ccEmails !== '')
 		requestBody.ccEmails = additionalFields.ccEmails;
 	// Sent only when on, as the string 'true' (the multipart helper takes string parts only). The
-	// API treats false like a missing key, so off or not added leaves the request as it was.
-	if (additionalFields.fitAnchoredTags === true) requestBody.fitAnchoredTags = 'true';
+	// API treats false like a missing key, so off or not added leaves the request as it was. An
+	// expression can hand the option the string "true" rather than a boolean.
+	if (String(additionalFields.fitAnchoredTags) === 'true') requestBody.fitAnchoredTags = 'true';
 
 	// Reminder/expiration schedule overrides. The field is scoped to both prepare operations
 	// (`prepareForReview` and `prepareForSigning`) — the backend accepts scheduleOverrides on

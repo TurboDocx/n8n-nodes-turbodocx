@@ -58,10 +58,11 @@ describe('TurboSign fitAnchoredTags', () => {
 	const sources = ['upload', 'url', 'deliverable', 'template'];
 
 	describe.each(operations)('%s', (operation, path) => {
+		// An expression such as {{ $json.fitTags }} hands the option the string "true", not a boolean
 		it.each(sources)(
-			'sends fitAnchoredTags "true" when the option is on (%s source)',
+			'sends fitAnchoredTags "true" when an expression turns the option on (%s source)',
 			async (source) => {
-				const { ctx, http } = run(operation, source, { fitAnchoredTags: true });
+				const { ctx, http } = run(operation, source, { fitAnchoredTags: 'true' });
 				await TurboDocx.prototype.execute.call(ctx);
 
 				expect(http.mock.calls[0][1].uri).toContain(path);
